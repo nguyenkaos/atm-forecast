@@ -1,3 +1,3 @@
 library("doMC")
-registerDoMC(cores = 2)
+registerDoMC(cores = 8)
 

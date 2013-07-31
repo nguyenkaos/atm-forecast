@@ -10,5 +10,6 @@ then
 fi
 
 nohup R CMD BATCH ${CODE} ${LOG} &
+sleep 2
 tail -f ${LOG}
  
