@@ -1,0 +1,14 @@
+#!/bin/bash
+
+CODE=${1}
+LOG="${1}out"
+
+if [ $# -ne 1 ]
+then
+	echo "Usage: batchR <script.R>"
+	exit 1
+fi
+
+nohup R CMD BATCH ${CODE} ${LOG} &
+tail -f ${LOG}
+ 
