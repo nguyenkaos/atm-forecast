@@ -1,14 +1,12 @@
 library("plyr")
 library("caret")
 library("lubridate")
-library("randomForest")
+#library("randomForest")
 
 source("multicore.R")
 source("clean.R")
 source("train.R")
 source("score.R")
-
-setwd("~/batchR/src/main/R")
 
 pathToCash = "../resources/cash.rds"
 if(!file.exists(pathToCash)) {
@@ -29,29 +27,44 @@ if(!file.exists(pathToCash)) {
   cash <- readRDS(pathToCash)
 }
 
-trainByAtm <- function(data) {
+trainAndScoreByAtm <- function(data) {
+  print(sprintf("about to train... ATM=%s nrows=%.0f minDate=%s maxDate=%s\n", 
+                unique(as.character(data$atm)), 
+                nrow(data),
+                min(data$trandate),
+                max(data$trandate))) 
   
   # train and score the data
   fit <- trainer(data, 
-                 f=usage ~ sin(dayOfYear*2*pi) + sin(dayOfSemiYear*2*pi) + sin(dayOfQuarter*2*pi) + dayOfWeek + weekOfMonth + weekOfYear + paydayN + holidayN + eventDistance, 
+                 form=usage ~ sin(dayOfYear*2*pi) + sin(dayOfSemiYear*2*pi) + sin(dayOfQuarter*2*pi) + dayOfWeek + weekOfMonth + weekOfYear + paydayN + holidayN + eventDistance, 
                  method="rf", 
-                 defaultTuneGrid=expand.grid(.mtry=) , 
+                 defaultTuneGrid=expand.grid(.mtry=), 
                  p=ymd("2013-05-15"))
-  scored <- score(data, fit)
   
-  # print diagnostics
-  test <- subset(scored, isTest=TRUE)
-  print(sprintf("test set results -> rmse = %.2f  r2 = %.2f  score = %.2f%%", 
-                RMSE(test$usageHat, test$usage, na.rm=T),
-                R2(test$usageHat, test$usage, na.rm=T),
-                100*sum(test$score, na.rm=T)/(nrow(test)*2)))
+  if(exists("fit")) {
+    scored <- score(data, fit)
+    
+    # print diagnostics
+    test <- subset(scored, isTest=TRUE)
+    print(sprintf("test set results -> rmse = %.2f  r2 = %.2f  score = %.2f%%", 
+                  RMSE(test$usageHat, test$usage, na.rm=T),
+                  R2(test$usageHat, test$usage, na.rm=T),
+                  100*sum(test$score, na.rm=T)/(nrow(test)*2)))
+  } else {
+    scored <- data.frame()
+    print(sprintf("not enough data to score ATM: %s", unique(as.character(cash$atm)))) 
+  }
   
   return(scored)
 }
   
 # train and score the model by atm
-results <- ddply(cash, "atm", trainByAtm, .progress="text", .parallel=F)
-saveRDS(results, paste("results", format(Sys.time(), "%Y%m%d-%H%M%S"), "rds", sep = "."))  
+scoreByAtm <- ddply(cash, "atm", trainAndScoreByAtm, .progress="text", .parallel=F)
+saveRDS(scoreByAtm, "scoreByAtm.rds")  
+
+# view score by day
+scoreByDate <- ddply(results, ~trandate, summarise, totalScore=sum(score))
+saveRDS(scoreByDate, "scoreByDate.rds")
 
 
 

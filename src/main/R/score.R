@@ -4,7 +4,7 @@ library("caret")
 # Scores the model based on the given input data.
 #
 score <- function(data, fit) {
-  
+
   # predict the training set 
   data$usageHat <- predict(fit, newdata=data)
   data$mape <- mapply(mape, data$usage, data$usageHat)
