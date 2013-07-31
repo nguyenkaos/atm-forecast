@@ -63,7 +63,7 @@ scoreByAtm <- ddply(cash, "atm", trainAndScoreByAtm, .progress="text", .parallel
 saveRDS(scoreByAtm, "scoreByAtm.rds")  
 
 # view score by day
-scoreByDate <- ddply(results, ~trandate, summarise, totalScore=sum(score))
+scoreByDate <- ddply(scoreByAtm, ~trandate, summarise, totalScore=sum(score))
 saveRDS(scoreByDate, "scoreByDate.rds")
 
 
