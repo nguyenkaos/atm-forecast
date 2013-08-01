@@ -1,7 +1,7 @@
 library("plyr")
 library("caret")
 library("lubridate")
-#library("randomForest")
+library("randomForest")
 
 source("multicore.R")
 source("clean.R")
@@ -38,7 +38,7 @@ trainAndScoreByAtm <- function(data) {
   fit <- trainer(data, 
                  form=usage ~ sin(dayOfYear*2*pi) + sin(dayOfSemiYear*2*pi) + sin(dayOfQuarter*2*pi) + dayOfWeek + weekOfMonth + weekOfYear + paydayN + holidayN + eventDistance, 
                  method="rf", 
-                 defaultTuneGrid=expand.grid(.mtry=), 
+                 defaultTuneGrid=expand.grid(.mtry=max(floor(ncol(data)/3), 1)), 
                  p=ymd("2013-05-15"))
   
   if(exists("fit")) {
