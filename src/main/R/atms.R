@@ -33,7 +33,7 @@ keep(cash)
 gc()
 
 trainAndScoreByAtm <- function(data) {
-  print(sprintf("about to train... ATM=%s nrows=%.0f minDate=%s maxDate=%s\n", 
+  print(sprintf("training... ATM=%s nrows=%.0f minDate=%s maxDate=%s\n", 
                 unique(as.character(data$atm)), 
                 nrow(data),
                 min(data$trandate),
@@ -46,7 +46,7 @@ trainAndScoreByAtm <- function(data) {
                  defaultTuneGrid=expand.grid(.mtry=max(floor(ncol(data)/3), 1)), 
                  p=ymd("2013-05-15"))
   
-  if(exists("fit")) {
+  if(!is.null(fit)) {
     scored <- score(data, fit)
     
     # print diagnostics

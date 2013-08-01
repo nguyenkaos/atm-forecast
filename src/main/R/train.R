@@ -22,6 +22,7 @@ trainer <- function(data, form, method, defaultTuneGrid, p) {
   # use k-fold cross-validation to tune the parameters
   trControl <- trainControl(method="repeatedcv", number=5, repeats=5)
   
+  fit <- NULL
   tryCatch(
     fit <- train(form=form, data=train, method=method, trControl=trControl), # GBM -> verbose=F, distribution="poisson"),
     error = function(e) {
@@ -30,7 +31,7 @@ trainer <- function(data, form, method, defaultTuneGrid, p) {
     }
   )
   
-  if(!exists("fit")) {
+  if(is.null(fit)) {
     warning("could not find tuning parameters!")
     
     # since parameter prediction failed, use the defaults
