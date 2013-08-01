@@ -2,6 +2,7 @@ library("plyr")
 library("caret")
 library("lubridate")
 library("randomForest")
+library("gdata")
 
 source("multicore.R")
 source("clean.R")
@@ -20,12 +21,16 @@ if(!file.exists(pathToCash)) {
   # clean the data
   cash <- clean(withdrawals, holidays, paydays, events)
   saveRDS(cash, pathToCash) 
-
+  
 } else {
 
   # reuse the data that was previously cleaned
   cash <- readRDS(pathToCash)
 }
+
+# clean up memory
+keep(cash)
+gc()
 
 trainAndScoreByAtm <- function(data) {
   print(sprintf("about to train... ATM=%s nrows=%.0f minDate=%s maxDate=%s\n", 
@@ -55,12 +60,14 @@ trainAndScoreByAtm <- function(data) {
     print(sprintf("not enough data to score ATM: %s", unique(as.character(cash$atm)))) 
   }
   
+  keep(scored)
   return(scored)
 }
   
 # train and score the model by atm
 scoreByAtm <- ddply(cash, "atm", trainAndScoreByAtm, .parallel=T)
 saveRDS(scoreByAtm, "scoreByAtm.rds")  
+keep(scoreByAtm)
 
 # view score by day
 scoreByDate <- ddply(scoreByAtm, ~trandate, summarise, totalScore=sum(score), .parallel=T)
