@@ -61,10 +61,11 @@ trainAndScoreByAtm <- function(data) {
     scored <- data.frame()
     print(sprintf("not enough data to score ATM: %s", atm)) 
   }
-  
+
+  # save off the scored data
+  saveRDS(scored, paste("../resources/atm-", atm, ".rds", sep=""))
   keep(scored)
-  saveRDS(scored, paste("../resources/", atm, ".rds", sep=""))
-  
+
   return(scored)
 }
   
