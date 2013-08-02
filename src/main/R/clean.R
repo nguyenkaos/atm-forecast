@@ -8,13 +8,6 @@ clean <- function(withdrawals, holidays, paydays, events) {
   
   cash <- withdrawals
   
-  # add in values to enable prediction for july
-  atms <- levels(cash$atm)
-  trandates <- as.Date(ymd("2013-07-01")) + 0:30
-  july <- merge(atms, trandates)
-  names(july) <- c("atm","trandate")
-  cash <- rbind.fill(cash, july)
-  
   # preprocess the data
   cash$usage <- as.integer(cash$usage)
   
