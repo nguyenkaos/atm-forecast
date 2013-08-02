@@ -5,10 +5,12 @@ library("caret")
 #
 score <- function(data, fit) {
 
-  # predict the training set 
-  data$usageHat <- predict(fit, newdata=data)
-  data$mape <- mapply(mape, data$usage, data$usageHat)
-  data$score <- mapply(points, data$mape)
+  if(nrow(data) > 0) {
+    # predict the training set 
+    data$usageHat <- predict(fit, newdata=data)
+    data$mape <- mapply(mape, data$usage, data$usageHat)
+    data$score <- mapply(points, data$mape)
+  }
   
   return(data)  
 }
