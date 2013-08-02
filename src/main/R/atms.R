@@ -66,12 +66,12 @@ trainAndScoreByAtm <- function(data) {
   
 # train and score the model by atm
 scoreByAtm <- ddply(cash, "atm", trainAndScoreByAtm, .parallel=FALSE)
-saveRDS(scoreByAtm, "scoreByAtm.rds")  
+saveRDS(scoreByAtm, "../resources/scoreByAtm.rds")  
 keep(scoreByAtm)
 
 # view score by day
 scoreByDate <- ddply(scoreByAtm, ~trandate, summarise, totalScore=sum(score), .parallel=FALSE)
-saveRDS(scoreByDate, "scoreByDate.rds")
+saveRDS(scoreByDate, "../resources/scoreByDate.rds")
 
 
 
