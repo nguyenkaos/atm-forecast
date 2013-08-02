@@ -64,27 +64,21 @@ trainAndScoreByAtm <- function(data) {
     # score the model
     if(!is.null(fit)) {
       scored <- score(data, fit)
+      
+      # print diagnostics
+      test <- subset(scored, isTest=TRUE)
+      print(sprintf("test set results -> rmse = %.2f  r2 = %.2f  score = %.2f%%", 
+                    RMSE(test$usageHat, test$usage, na.rm=T),
+                    R2(test$usageHat, test$usage, na.rm=T),
+                    100*sum(test$score, na.rm=T)/(nrow(test)*2)))
     
     } else {
       # not enough data to train a model
       scored <- data.frame()
       print(sprintf("not enough data to score ATM: %s", atm)) 
     }
-    
-    # print diagnostics
-    test <- subset(scored, isTest=TRUE)
-    print(sprintf("test set results -> rmse = %.2f  r2 = %.2f  score = %.2f%%", 
-                  RMSE(test$usageHat, test$usage, na.rm=T),
-                  R2(test$usageHat, test$usage, na.rm=T),
-                  100*sum(test$score, na.rm=T)/(nrow(test)*2)))
   }
   
-  
-
-  
-
-
-
   # save off the scored data
   saveRDS(scored, paste("./work/atm-", atm, ".rds", sep=""))
   keep(scored)
