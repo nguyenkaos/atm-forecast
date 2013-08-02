@@ -33,8 +33,10 @@ keep(cash)
 gc()
 
 trainAndScoreByAtm <- function(data) {
+  
+  atm <- unique(as.character(data$atm))
   print(sprintf("training... ATM=%s nrows=%.0f minDate=%s maxDate=%s\n", 
-                unique(as.character(data$atm)), 
+                atm, 
                 nrow(data),
                 min(data$trandate),
                 max(data$trandate))) 
@@ -57,10 +59,12 @@ trainAndScoreByAtm <- function(data) {
                   100*sum(test$score, na.rm=T)/(nrow(test)*2)))
   } else {
     scored <- data.frame()
-    print(sprintf("not enough data to score ATM: %s", unique(as.character(cash$atm)))) 
+    print(sprintf("not enough data to score ATM: %s", atm)) 
   }
   
   keep(scored)
+  saveRDS(scored, paste("../resources/", atm, ".rds", sep=""))
+  
   return(scored)
 }
   
