@@ -3,7 +3,7 @@
 #
 # Trains a model based on input, a function, and a method.
 #
-trainer <- function(data, form, method, defaultTuneGrid, p) {
+trainer <- function(data, form, method, defaultTuneGrid, p, ...) {
   
   # split the data for cross-validation
   train <- subset(data, trandate < as.Date(p))
@@ -24,7 +24,7 @@ trainer <- function(data, form, method, defaultTuneGrid, p) {
   
   fit <- NULL
   tryCatch(
-    fit <- train(form=form, data=train, method=method, trControl=trControl), # GBM -> verbose=F, distribution="poisson"),
+    fit <- train(form=form, data=train, method=method, trControl=trControl, ...), # GBM -> verbose=F, distribution="poisson"),
     error = function(e) {
       print(e) 
       return(NULL)
