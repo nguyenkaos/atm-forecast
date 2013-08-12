@@ -1,257 +1,0 @@
-
-R version 3.0.1 (2013-05-16) -- "Good Sport"
-Copyright (C) 2013 The R Foundation for Statistical Computing
-Platform: i386-w64-mingw32/i386 (32-bit)
-
-R is free software and comes with ABSOLUTELY NO WARRANTY.
-You are welcome to redistribute it under certain conditions.
-Type 'license()' or 'licence()' for distribution details.
-
-  Natural language support but running in an English locale
-
-R is a collaborative project with many contributors.
-Type 'contributors()' for more information and
-'citation()' on how to cite R or R packages in publications.
-
-Type 'demo()' for some demos, 'help()' for on-line help, or
-'help.start()' for an HTML browser interface to help.
-Type 'q()' to quit R.
-
-[Previously saved workspace restored]
-
-> 
-> library("plyr")
-> library("dtw")
-Loading required package: proxy
-
-Attaching package: 'proxy'
-
-The following object is masked from 'package:stats':
-
-    as.dist, dist
-
-Loaded dtw v1.16. See ?dtw for help, citation("dtw") for use in publication.
-
-> library("fpc")
-Loading required package: MASS
-Loading required package: cluster
-Loading required package: mclust
-Package 'mclust' version 4.2
-Loading required package: flexmix
-Loading required package: lattice
-> library("ggplot2")
-> library("reshape2")
-> library("gdata")
-gdata: read.xls support for 'XLS' (Excel 97-2004) files ENABLED.
-
-gdata: read.xls support for 'XLSX' (Excel 2007+) files ENABLED.
-
-Attaching package: 'gdata'
-
-The following object is masked from 'package:stats':
-
-    nobs
-
-The following object is masked from 'package:utils':
-
-    object.size
-
-> library("caret")
-Loading required package: foreach
-
-Attaching package: 'caret'
-
-The following object is masked _by_ '.GlobalEnv':
-
-    train
-
-> 
-> # cluster the ATMs based on cash usage
-> pathToAtms <- "../work/atms.rds"
-> if(file.exists(pathToAtms)) {
-+     print(sprintf("loading data from '%s'", pathToAtms))
-+     atms <- readRDS(pathToAtms)
-+     
-+ } else {
-+     print(sprintf("calculating ATM data which will be saved here: '%s'", pathToAtms))
-+     
-+     # load/merge the geo, profile and withdrawals data
-+     geo <- readRDS("../../resources/geocore.rds")
-+     profiles <- readRDS("../../resources/profiles.rds")
-+     names(profiles)[names(profiles) == 'terminal_id'] <- 'atm'
-+     atms <- merge(profiles, geo, by="atm")
-+     withd <- readRDS("../../resources/withdrawals.rds")
-+     
-+     # take a sample of the data only
-+     atmSample <- sample(unique(withd$atm), 87)
-+     atms <- subset(atms, atm %in% atmSample)
-+     withd <- subset(withd, atm %in% atmSample)
-+     
-+     # transform the data for each ATM into a time series
-+     usage <- dlply(withd, "atm", function(byAtm) as.vector(byAtm$usage), .progress="text")
-+     
-+     # calculate the dist between each ATM and build a tree
-+     tree <- hclust(dist(usage, method="DTW"), method="ward")   
-+     
-+     # cluster the ATMs based on their cash usage time series
-+     groups <- cutree(tree, k=6) 
-+     atms$group <- sapply(atms$atm, function(atm) as.integer(groups[as.character(atm)]))
-+     
-+     saveRDS(atms, pathToAtms)
-+     keep(atms, sure=T)
-+ }
-[1] "loading data from '../work/atms.rds'"
-> 
-> # predict the group based on the profile/geo data alone
-> train <- function(data) {
-+     if(nrow(data)>2) {
-+         print(sprintf("training ATM '%s' \n", unique(as.character(data$atm))))
-+     
-+         # split the data
-+         ind <- createDataPartition(data$group, p=0.8, list=F, times=1)
-+         train <- data[ind,]
-+         train$isTest <- F
-+         
-+         test <- data[-ind,]
-+         test$isTest <- T 
-+         
-+         # fit a model 
-+         fit <- NULL
-+         tryCatch(
-+             fit <- train(form=group~., data=train, method="gbm", 
-+                          trControl=trainControl(method="repeatedcv", number=5, repeats=5), 
-+                          verbose=F, distribution="poisson"),
-+             error = function(e) {
-+                 print(e) 
-+             }
-+         )
-+         
-+         # use the model to predict the group
-+         data$groupHat <- predict(fit, newdata=data)
-+         
-+     } else {
-+         print(sprintf("not able to train for ATM '%s' \n", unique(as.character(data$atm))))
-+     }
-+     
-+     return(data)
-+ }
-> 
-> # train and score the model by atm
-> clusters <- ddply(atms, "atm", train, .parallel=FALSE, .progress="text")
-  |                                                                              |                                                                      |   0%[1] "not able to train for ATM 'AZ2763' \n"
-  |                                                                              |=                                                                     |   1%[1] "not able to train for ATM 'AZ2771' \n"
-  |                                                                              |==                                                                    |   2%[1] "not able to train for ATM 'AZ2806' \n"
-  |                                                                              |==                                                                    |   3%[1] "not able to train for ATM 'AZ6599' \n"
-  |                                                                              |===                                                                   |   5%[1] "not able to train for ATM 'CA0552' \n"
-  |                                                                              |====                                                                  |   6%[1] "not able to train for ATM 'CA0671' \n"
-  |                                                                              |=====                                                                 |   7%[1] "not able to train for ATM 'CA1349' \n"
-  |                                                                              |======                                                                |   8%[1] "not able to train for ATM 'CA1430' \n"
-  |                                                                              |======                                                                |   9%[1] "not able to train for ATM 'CA2080' \n"
-  |                                                                              |=======                                                               |  10%[1] "not able to train for ATM 'CA2163' \n"
-  |                                                                              |========                                                              |  11%[1] "not able to train for ATM 'CA2250' \n"
-  |                                                                              |=========                                                             |  13%[1] "not able to train for ATM 'CA2319' \n"
-  |                                                                              |==========                                                            |  14%[1] "not able to train for ATM 'CA2411' \n"
-  |                                                                              |==========                                                            |  15%[1] "not able to train for ATM 'CA2426' \n"
-  |                                                                              |===========                                                           |  16%[1] "not able to train for ATM 'CA2452' \n"
-  |                                                                              |============                                                          |  17%[1] "not able to train for ATM 'CA2564' \n"
-  |                                                                              |=============                                                         |  18%[1] "not able to train for ATM 'CA2602' \n"
-  |                                                                              |==============                                                        |  20%[1] "not able to train for ATM 'FL0164' \n"
-  |                                                                              |==============                                                        |  21%[1] "not able to train for ATM 'FL0340' \n"
-  |                                                                              |===============                                                       |  22%[1] "not able to train for ATM 'FL0395' \n"
-  |                                                                              |================                                                      |  23%[1] "not able to train for ATM 'FL7539' \n"
-  |                                                                              |=================                                                     |  24%[1] "not able to train for ATM 'IL0041' \n"
-  |                                                                              |==================                                                    |  25%[1] "not able to train for ATM 'IL1753' \n"
-  |                                                                              |===================                                                   |  26%[1] "not able to train for ATM 'IL1886' \n"
-  |                                                                              |===================                                                   |  28%[1] "not able to train for ATM 'IL3583' \n"
-  |                                                                              |====================                                                  |  29%[1] "not able to train for ATM 'IL3629' \n"
-  |                                                                              |=====================                                                 |  30%[1] "not able to train for ATM 'IL3682' \n"
-  |                                                                              |======================                                                |  31%[1] "not able to train for ATM 'IL4089' \n"
-  |                                                                              |=======================                                               |  32%[1] "not able to train for ATM 'IL4752' \n"
-  |                                                                              |=======================                                               |  33%[1] "not able to train for ATM 'IL5108' \n"
-  |                                                                              |========================                                              |  34%[1] "not able to train for ATM 'IL5786' \n"
-  |                                                                              |=========================                                             |  36%[1] "not able to train for ATM 'IL7308' \n"
-  |                                                                              |==========================                                            |  37%[1] "not able to train for ATM 'IL9124' \n"
-  |                                                                              |===========================                                           |  38%[1] "not able to train for ATM 'IL9518' \n"
-  |                                                                              |===========================                                           |  39%[1] "not able to train for ATM 'IN0047' \n"
-  |                                                                              |============================                                          |  40%[1] "not able to train for ATM 'IN0053' \n"
-  |                                                                              |=============================                                         |  41%[1] "not able to train for ATM 'IN0122' \n"
-  |                                                                              |==============================                                        |  43%[1] "not able to train for ATM 'IN2613' \n"
-  |                                                                              |===============================                                       |  44%[1] "not able to train for ATM 'IN2796' \n"
-  |                                                                              |===============================                                       |  45%[1] "not able to train for ATM 'IN3722' \n"
-  |                                                                              |================================                                      |  46%[1] "not able to train for ATM 'IN5562' \n"
-  |                                                                              |=================================                                     |  47%[1] "not able to train for ATM 'IN6594' \n"
-  |                                                                              |==================================                                    |  48%[1] "not able to train for ATM 'KY0007' \n"
-  |                                                                              |===================================                                   |  49%[1] "not able to train for ATM 'KY2896' \n"
-  |                                                                              |===================================                                   |  51%[1] "not able to train for ATM 'LA0140' \n"
-  |                                                                              |====================================                                  |  52%[1] "not able to train for ATM 'LA0149' \n"
-  |                                                                              |=====================================                                 |  53%[1] "not able to train for ATM 'LA1215' \n"
-  |                                                                              |======================================                                |  54%[1] "not able to train for ATM 'LA6448' \n"
-  |                                                                              |=======================================                               |  55%[1] "not able to train for ATM 'MI0115' \n"
-  |                                                                              |=======================================                               |  56%[1] "not able to train for ATM 'MI0593' \n"
-  |                                                                              |========================================                              |  57%[1] "not able to train for ATM 'MI1041' \n"
-  |                                                                              |=========================================                             |  59%[1] "not able to train for ATM 'MI1435' \n"
-  |                                                                              |==========================================                            |  60%[1] "not able to train for ATM 'MI4070' \n"
-  |                                                                              |===========================================                           |  61%[1] "not able to train for ATM 'NJ0135' \n"
-  |                                                                              |===========================================                           |  62%[1] "not able to train for ATM 'NJ7751' \n"
-  |                                                                              |============================================                          |  63%[1] "not able to train for ATM 'NV0055' \n"
-  |                                                                              |=============================================                         |  64%[1] "not able to train for ATM 'NY0069' \n"
-  |                                                                              |==============================================                        |  66%[1] "not able to train for ATM 'NY0114' \n"
-  |                                                                              |===============================================                       |  67%[1] "not able to train for ATM 'NY0218' \n"
-  |                                                                              |===============================================                       |  68%[1] "not able to train for ATM 'NY0455' \n"
-  |                                                                              |================================================                      |  69%[1] "not able to train for ATM 'NY0723' \n"
-  |                                                                              |=================================================                     |  70%[1] "not able to train for ATM 'NY0760' \n"
-  |                                                                              |==================================================                    |  71%[1] "not able to train for ATM 'NY4222' \n"
-  |                                                                              |===================================================                   |  72%[1] "not able to train for ATM 'NY4902' \n"
-  |                                                                              |===================================================                   |  74%[1] "not able to train for ATM 'NY8634' \n"
-  |                                                                              |====================================================                  |  75%[1] "not able to train for ATM 'NY8682' \n"
-  |                                                                              |=====================================================                 |  76%[1] "not able to train for ATM 'NY9651' \n"
-  |                                                                              |======================================================                |  77%[1] "not able to train for ATM 'OH0114' \n"
-  |                                                                              |=======================================================               |  78%[1] "not able to train for ATM 'OH0156' \n"
-  |                                                                              |========================================================              |  79%[1] "not able to train for ATM 'OH3525' \n"
-  |                                                                              |========================================================              |  80%[1] "not able to train for ATM 'OH7988' \n"
-  |                                                                              |=========================================================             |  82%[1] "not able to train for ATM 'OK5003' \n"
-  |                                                                              |==========================================================            |  83%[1] "not able to train for ATM 'OR2317' \n"
-  |                                                                              |===========================================================           |  84%[1] "not able to train for ATM 'OR2380' \n"
-  |                                                                              |============================================================          |  85%[1] "not able to train for ATM 'TX0249' \n"
-  |                                                                              |============================================================          |  86%[1] "not able to train for ATM 'TX0511' \n"
-  |                                                                              |=============================================================         |  87%[1] "not able to train for ATM 'TX0643' \n"
-  |                                                                              |==============================================================        |  89%[1] "not able to train for ATM 'TX2246' \n"
-  |                                                                              |===============================================================       |  90%[1] "not able to train for ATM 'TX3030' \n"
-  |                                                                              |================================================================      |  91%[1] "not able to train for ATM 'TX3150' \n"
-  |                                                                              |================================================================      |  92%[1] "not able to train for ATM 'TX3240' \n"
-  |                                                                              |=================================================================     |  93%[1] "not able to train for ATM 'TX4163' \n"
-  |                                                                              |==================================================================    |  94%[1] "not able to train for ATM 'TX4316' \n"
-  |                                                                              |===================================================================   |  95%[1] "not able to train for ATM 'TX6265' \n"
-  |                                                                              |====================================================================  |  97%[1] "not able to train for ATM 'WA2611' \n"
-  |                                                                              |====================================================================  |  98%[1] "not able to train for ATM 'WA2829' \n"
-  |                                                                              |===================================================================== |  99%[1] "not able to train for ATM 'WI5095' \n"
-  |                                                                              |======================================================================| 100%
-> saveRDS(clusters, "../work/cluster.rds")  
-> 
-> 
-> 
-> 
-> # ?how to measure the quality of the clusters? 
-> #   - a forecast using cluster average history is "close" to forecast with own history
-> #   - take through whole process - forecast a new ATM based on average of its cluster and review accuracy... just
-> #           average each day's usage column wise
-> 
-> # ?center and scale the time series before clustering?
-> 
-> # ?cluster over only recent history?
-> # plot the time series for comparison
-> #withd <- subset(withd, trandate>as.Date('2013-02-28','%Y-%m-%d'))
-> #withd <- subset(withd, atm %in% names(atms))
-> #withd$group <- sapply(withd$atm, function(a) as.integer(groups[as.character(a)]))
-> #ithd <- melt(withd, id=c("atm","trandate","group"))
-> #ggplot(withd, aes(x=trandate, y=value, linestyle=group, colour=group, group=atm)) + geom_line()
-> 
-> 
-> # review the model's success 
-> #featurePlot(x=test[,-c("group")], y=test$group, plot="pairs", auto.keys=list(columns=6))
-> 
-> 
-> 
-> proc.time()
-   user  system elapsed 
-   5.56    0.48    7.13 
