@@ -7,8 +7,15 @@ library("reshape2")
 library("gdata")
 library("caret")
 
-# cluster the ATMs based on cash usage
-pathToAtms <- "../work/atms.rds"
+numberOfClusters = 6
+
+# create a working directory
+dir.create(path="./work", showWarnings=FALSE)
+
+############################################################################
+# Cluster the ATMs based on their cash usage time series.
+############################################################################
+pathToAtms <- "work/atms.rds"
 if(file.exists(pathToAtms)) {
     print(sprintf("loading data from '%s'", pathToAtms))
     atms <- readRDS(pathToAtms)
@@ -18,7 +25,7 @@ if(file.exists(pathToAtms)) {
     
     # load/merge the geo, profile and withdrawals data
     geo <- readRDS("../../resources/geocore.rds")
-    profiles <- readRDS("../../resources/profiles.rds")
+    profiles <- readRDS("../../resources/profiles.rds")    
     names(profiles)[names(profiles) == 'terminal_id'] <- 'atm'
     atms <- merge(profiles, geo, by="atm")
     withd <- readRDS("../../resources/withdrawals.rds")
@@ -35,72 +42,48 @@ if(file.exists(pathToAtms)) {
     tree <- hclust(dist(usage, method="DTW"), method="ward")   
     
     # cluster the ATMs based on their cash usage time series
-    groups <- cutree(tree, k=6) 
+    groups <- cutree(tree, k=numberOfClusters) 
     atms$group <- sapply(atms$atm, function(atm) as.integer(groups[as.character(atm)]))
+    atms$group <- factor(atms$group, levels=c(1:numberOfClusters))
     
     saveRDS(atms, pathToAtms)
     keep(atms, sure=T)
 }
 
-# predict the group based on the profile/geo data alone
-train <- function(data) {
-    if(nrow(data)>1) {
-        print(sprintf("training ATM '%s' \n", unique(as.character(data$atm))))
-    
-        # PROBLEM - THERE IS ALWAYS 1 ROW FOR EACH ATM!  HOW CAN THIS BE TRAINED??
-        # split the data
-        ind <- createDataPartition(data$group, p=0.8, list=F, times=1)
-        train <- data[ind,]
-        train$isTest <- F
-        
-        test <- data[-ind,]
-        test$isTest <- T 
-        
-        # fit a model 
-        fit <- NULL
-        tryCatch(
-            fit <- train(form=group~., data=train, method="gbm", 
-                         trControl=trainControl(method="repeatedcv", number=5, repeats=5), 
-                         verbose=F, distribution="poisson"),
-            error = function(e) {
-                print(e) 
-            }
-        )
-        
-        # use the model to predict the group
-        data$groupHat <- predict(fit, newdata=data)
-        
-    } else {
-        print(sprintf("not able to train for ATM '%s' \n", unique(as.character(data$atm))))
-    }
-    
-    return(data)
-}
+############################################################################
+# Predict the clusters based on the Profile, Geo data alone.
+############################################################################
 
-# train and score the model by atm
-clusters <- ddply(atms, "atm", train, .parallel=FALSE, .progress="text")
-saveRDS(clusters, "../work/cluster.rds")  
+# split into test and training sets
+ind <- createDataPartition(atms$group, p=0.8, list=F)
+test <- atms[-ind,]
+train <- atms[ind,]
 
+# instead of using a formula, better performance with many predictors
+# gbm does not currently handle categorical variables with more than 1024 levels or dates
+predictors <- subset(train, select=-c(atm, group, NAME, LOCATION_DESC, Address, City, 
+                                      ZipCode, conversion_date, ATM_INSTALL_DATE, INT_ZIP))
+outcomes <- subset(train, select=group, drop=T)
 
+# fit a model 
+fit <- train(x=predictors, y=outcomes, method="gbm", distribution="multinomial")
+saveRDS(fit, "work/cluster-fit.rds")
 
+# use the model to predict the group
+test$groupHat <- predict(fit, newdata=test)
+train$groupHat <- predict(fit, newdata=train)
 
-# ?how to measure the quality of the clusters? 
-#   - a forecast using cluster average history is "close" to forecast with own history
-#   - take through whole process - forecast a new ATM based on average of its cluster and review accuracy... just
-#           average each day's usage column wise
+# save the results
+test$isTest <- T 
+train$isTest <- F
+clusters <- rbind.fill(train, test)
 
-# ?center and scale the time series before clustering?
+clusters$groupHat <- round(clusters$groupHat)
+clusters$groupHat <- factor(clusters$groupHat, levels=c(1:numberOfClusters))
+clusters$group <- factor(clusters$group, levels=c(1:numberOfClusters))
 
-# ?cluster over only recent history?
-# plot the time series for comparison
-#withd <- subset(withd, trandate>as.Date('2013-02-28','%Y-%m-%d'))
-#withd <- subset(withd, atm %in% names(atms))
-#withd$group <- sapply(withd$atm, function(a) as.integer(groups[as.character(a)]))
-#ithd <- melt(withd, id=c("atm","trandate","group"))
-#ggplot(withd, aes(x=trandate, y=value, linestyle=group, colour=group, group=atm)) + geom_line()
+saveRDS(clusters, "work/clusters.rds")  
 
-
-# review the model's success 
-#featurePlot(x=test[,-c("group")], y=test$group, plot="pairs", auto.keys=list(columns=6))
+keep(clusters, fit)
 
 
