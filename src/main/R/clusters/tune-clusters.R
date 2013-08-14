@@ -41,6 +41,16 @@ tree <- cache("tree", {
     hclust(dist(usage, method="DTW"), method="ward")  
 })
 
+
+# TODO - iterate through numberOfClusers from 1 to 8705
+# TODO - generage the clusters
+# TODO - in each cluster, set aside a few hold-out ATMs
+# TODO - calculate an "average" cash usage for the cluster
+# TODO - (a) forecast the hold-out ATMs based on their actual usage
+# TODO - (b) forecast the hold-out ATMs based on the cluster average usage
+# TODO - the best cluster size is the one with minimum of (a) - (b)
+
+
 ############################################################################
 # cluster the ATMs based on their cash usage time series
 clusters <- cache("clusters", {
@@ -53,49 +63,6 @@ clusters <- cache("clusters", {
     })
 })
 
-############################################################################
-# Create a model to predict the clusters based on the Profile/Geo data alone.
-fit <- cache("fit", {
-
-    # split into test and training sets
-    ind <- createDataPartition(clusters$cluster, p=0.8, list=F)
-    test <- clusters[-ind,]
-    train <- clusters[ind,]
-    
-    # fit a model - gbm does not currently handle categorical variables with more than 1024 levels or dates
-    outcomes <- train$cluster
-    predictors <- subset(train, select=-c(atm, cluster, name, location.desc, address, city, 
-                                          zipcode, conversion.date, atm.install.date, int.zip, 
-                                          branch.latitude, branch.longitude, combinedservice,
-                                          adj.ews, cbsa.id))
-    fit <- train(x=predictors, y=outcomes, method="gbm",
-                 trControl=trainControl(method="repeatedcv", number=5, repeats=5))
-})
-
-############################################################################
-# Predict the clusters based on the Profile, Geo data alone.
-predictions <- cache("predictions", {
-    
-    # use the model to predict the clusters
-    test <- within(test, {
-        clusterHat <- predict(fit, newdata=test)
-        isTest <- T 
-    })
-    
-    train <- within(train, {
-        clusterHat <- predict(fit, newdata=train)
-        isTest <- F
-    })
-    
-    clusters <- rbind.fill(train, test)
-    
-    # TODO get rid of this or move it above
-    clusters <- within(clusters, {
-        clusterHat <- round(clusterHat)
-        clusterHat <- factor(clusterHat, levels=c(1:numberOfClusters))
-        cluster <- factor(cluster, levels=c(1:numberOfClusters))
-    })
-})
 
 
 
