@@ -19,7 +19,7 @@ cache <- function(cacheName, expr, cacheDir="work", clearCache=F) {
         print(sprintf("the result has already been cached: %s", cacheFile))
         result <- readRDS(cacheFile)
         
-    # eval the expression and cache its result
+        # eval the expression and cache its result
     } else {
         print(sprintf("the result has NOT been cached: %s", cacheFile))
         result <- eval(expr)
@@ -28,5 +28,4 @@ cache <- function(cacheName, expr, cacheDir="work", clearCache=F) {
     
     return(result)
 }
-
 

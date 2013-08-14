@@ -14,41 +14,34 @@ source("utils/score.R")
 parallel = FALSE
 
 ##################################################################
-# Serves as a facade to enable cacheing of the tuning/training 
-# results for each ATM.  Previously calculated results will be
-# loaded back into memory from disk, as needed.
-##################################################################
-cacheByAtm <- function(data) {
-    cacheFile = sprintf("gbm-%s", unique(as.character(data$atm)))
-    cache(cacheFile, trainAndScore, data)
-}
-
-##################################################################
 # Trains and scores a set of data.  Returns the entire input data
 # set with all features, along with the prediction and scoring
-# metrics.
+# metrics.  
 ##################################################################
 trainAndScore <- function(data) {
     
-    # train the model
-    fit <- trainer(data, 
-                   form=usage ~ dayOfYear + dayOfSemiYear + dayOfQuarter + dayOfWeek + 
-                       weekOfMonth + weekOfYear + paydayN + holidayN + eventDistance + trandateN, 
-                   p=ymd("2013-06-30"),
-                   method="gbm", defaultTuneGrid = expand.grid(.interaction.depth=2, .n.trees=50, .shrinkage=0.1), 
-                   verbose=F, distribution="poisson")
-    
-    # score the model
-    scored <- score(data, fit)
-
-    return(scored)
+    # cache the scored results for each ATM
+    atm <- unique(as.character(data$atm))
+    cache(sprintf("gbm-%s", atm), { 
+        
+        # train the model
+        fit <- trainer(data, form=usage ~ dayOfYear + dayOfSemiYear + dayOfQuarter + dayOfWeek + 
+                           weekOfMonth + weekOfYear + paydayN + holidayN + eventDistance + trandateN, 
+                       p=ymd("2013-06-30"),
+                       method="gbm", defaultTuneGrid = expand.grid(.interaction.depth=2, .n.trees=50, .shrinkage=0.1), 
+                       verbose=F, distribution="poisson")
+        
+        # score the model
+        scored <- score(data, fit)
+        return(scored)          
+    })
 }
 
 # load, clean and cache the input data
-cash <- cache("cash", clean)
+cash <- cache("cash", clean())
 
 # train and score the model by atm
-scoreByAtm <- ddply(cash, "atm", cacheByAtm, .parallel=parallel)
+scoreByAtm <- ddply(cash, "atm", trainAndScore, .parallel=parallel)
 saveRDS(scoreByAtm, "./work/gbm-scoreByAtm.rds")  
 
 # summarize the scores by day
