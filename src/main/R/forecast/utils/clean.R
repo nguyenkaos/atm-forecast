@@ -9,22 +9,22 @@
 clean <- function(libDir="../../resources") {
     
     # load the raw input data
-    withdrawals <- readRDS(sprintf("%s/withdrawals.rds", libDir))
+    cash <- readRDS(sprintf("%s/withdrawals.rds", libDir))
     holidays <- read.csv(sprintf("%s/holidays.csv", libDir))
     events <- read.csv(sprintf("%s/events.csv", libDir))
     paydays <- read.csv(sprintf("%s/paydays.csv", libDir))
     
-    cash <- withdrawals
-    cash$usage <- as.integer(cash$usage)
-    
     # add date related features
-    cash$trandateN <- as.integer(cash$trandate)
-    cash$dayOfWeek <- as.integer(wday(cash$trandate))
-    cash$dayOfYear <- as.integer(yday(cash$trandate))
-    cash$dayOfQuarter <- as.integer(cash$dayOfYear %% 91)
-    cash$dayOfSemiYear <- as.integer(cash$dayOfYear %% 182)
-    cash$weekOfMonth <- as.integer(week(cash$trandate) - week(floor_date(cash$trandate,"month")))
-    cash$weekOfYear <- as.integer(week(cash$trandate))  
+    cash <- within(cash, {
+        usage <- as.integer(usage)
+        trandateN <- as.integer(trandate)
+        dayOfWeek <- as.integer(wday(trandate))
+        dayOfYear <- as.integer(yday(trandate))
+        dayOfQuarter <- as.integer(dayOfYear %% 91)
+        dayOfSemiYear <- as.integer(dayOfYear %% 182)
+        weekOfMonth <- as.integer(week(trandate) - week(floor_date(trandate,"month")))
+        weekOfYear <- as.integer(week(trandate))  
+    })
     
     # holidays - clean
     holidays$holiday <- NULL
