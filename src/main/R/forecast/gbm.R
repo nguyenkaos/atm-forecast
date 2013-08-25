@@ -14,7 +14,7 @@ source("utils/score.R")
 parallel = FALSE
 
 ##################################################################
-# Trains and scores a set of data.  Returns the entire input data
+# Trains and scores a subset of data.  Returns the entire input data
 # set with all features, along with the prediction and scoring
 # metrics.  
 ##################################################################
@@ -37,16 +37,20 @@ trainAndScore <- function(data) {
     })
 }
 
-# load, clean and cache the input data
-cash <- cache("cash", clean())
+gbmTrainer <- function() {
+    # load, clean and cache the input data
+    cash <- cache("cash", clean())
+    
+    # train and score the model by atm
+    scoreByAtm <- ddply(cash, "atm", trainAndScore, .parallel=parallel)
+    saveRDS(scoreByAtm, "./work/gbm-scoreByAtm.rds")  
+    
+    # summarize the scores by day
+    scoreByDate <- ddply(scoreByAtm, ~trandate, summarise, totalScore=sum(score), .parallel=parallel)
+    saveRDS(scoreByDate, "./work/gbm-scoreByDate.rds")
+}
 
-# train and score the model by atm
-scoreByAtm <- ddply(cash, "atm", trainAndScore, .parallel=parallel)
-saveRDS(scoreByAtm, "./work/gbm-scoreByAtm.rds")  
 
-# summarize the scores by day
-scoreByDate <- ddply(scoreByAtm, ~trandate, summarise, totalScore=sum(score), .parallel=parallel)
-saveRDS(scoreByDate, "./work/gbm-scoreByDate.rds")
 
 
 
