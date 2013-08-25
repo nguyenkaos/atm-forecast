@@ -5,8 +5,13 @@ library("ggplot2")
 library("reshape2")
 library("gdata")
 library("caret")
+library("fastcluster")  # overwrites stats::hclust 
+library("logging")
 
 source("utils/cache.R")
+
+# setup logging
+basicConfig(level=20)
 
 ############################################################################
 # clean and preprocess the input data
@@ -31,73 +36,106 @@ atms <- cache("atms", {
 ############################################################################
 # transform the cash usage for each ATM into a time series
 usage <- cache("usage", {
-    dlply(withd, "atm", function(byAtm) as.vector(byAtm$usage), .progress="text")
+    usage <- dlply(withd, "atm", function(byAtm) rev(as.vector(byAtm$usage)), .progress="text")
+        
+    # ATMs will all have time series of different lengths
+    # need most recent data first to allow time series of
+    # differing lengths to line up correctly
+    # ATM1: n=now(), n-1, n-2, n-3
+    # ATM2: n=now(), n-1, n-2, n-3, n-4
+    #u <- sapply(u, function(u) ts(rev(unlist(u))))
+    foo <- data.frame(atm=names(usage), usage=I(usage), rownames)
+    rownames(foo) <- NULL
+    foo
 })
 
 ############################################################################
 # create a 'tree' using hclust based on each ATM's cash usage time series.
 # that can be used to create any number of clusters and is rather expensive to build.
 tree <- cache("tree", {
-    hclust(dist(usage, method="DTW"), method="ward")  
+    hclust(dist(usage, method="DTW"))  
 })
 
 ############################################################################
 # cluster the ATMs based on their cash usage time series
-clusters <- cache("clusters", {
+cAtms <- cache("cAtms", {
     numberOfClusters = 6
+    cAtms <- atms
+    rownames(cAtms) <- NULL
     
+    # cluster the ATMs
     clusters <- cutree(tree, k=numberOfClusters) 
-    clusters <- within(clusters, {
+    cAtms <- within(cAtms, {
         cluster <- sapply(atm, function(atm) as.integer(clusters[as.character(atm)]))
         cluster <- factor(cluster, levels=c(1:numberOfClusters))       
     })
+    
+    # mark the training vs test ATMs
+    cAtms$isTrain <- sapply(rownames(cAtms), function(row) { 
+        row %in% createDataPartition(cAtms$cluster, p=0.8, list=F)
+    })
+    
+    cAtms  # needed to ensure it is returned from code block
 })
 
 ############################################################################
 # Create a model to predict the clusters based on the Profile/Geo data alone.
 fit <- cache("fit", {
-
-    # split into test and training sets
-    ind <- createDataPartition(clusters$cluster, p=0.8, list=F)
-    test <- clusters[-ind,]
-    train <- clusters[ind,]
     
-    # fit a model - gbm does not currently handle categorical variables with more than 1024 levels or dates
-    outcomes <- train$cluster
-    predictors <- subset(train, select=-c(atm, cluster, name, location.desc, address, city, 
-                                          zipcode, conversion.date, atm.install.date, int.zip, 
-                                          branch.latitude, branch.longitude, combinedservice,
-                                          adj.ews, cbsa.id))
-    fit <- train(x=predictors, y=outcomes, method="gbm",
+    # split into test and training sets
+    train <- subset(cAtms, isTrain==T)
+    test <- subset(cAtms, isTrain==F)
+    
+    # remove features that cannot be used or will not be available for new ATMs
+    predictors <- subset(train, 
+                         select=-c(isTrain, name, location.desc, address, city, 
+                                   zipcode, conversion.date, atm.install.date, int.zip, 
+                                   branch.latitude, branch.longitude, combinedservice,
+                                   adj.ews, cbsa.id, withdrawals.past.2wk, billcount.past.2wk, 
+                                   frequency, rep.per.wk ))
+    outcome <- train$cluster
+    
+    # fit a model
+    fit <- train(x=predictors, y=outcome, method="gbm", verbose=T,
                  trControl=trainControl(method="repeatedcv", number=5, repeats=5))
+    
+    ######################################################################
+    # PROBLEM/TODO
+    # Using the {x,y} interface for train is much faster, but for the most
+    # part always predicts cluster 3.  Huh?
+    # 
+    # Now trying with formula interface which is waaay slower, but want to
+    # see the predictions.
+    ######################################################################
+    
 })
 
 ############################################################################
 # Predict the clusters based on the Profile, Geo data alone.
 predictions <- cache("predictions", {
     
+    # for some reason leaving the 'cluster' field causes a cluster-f***
+    test <- subset(cAtms, !isTrain)
+    testCluster <- test$cluster
+    test$cluster <- NULL
+    
     # use the model to predict the clusters
-    test <- within(test, {
-        clusterHat <- predict(fit, newdata=test)
-        isTest <- T 
-    })
+    test$clusterHat <- predict.train(fit, newdata=test)
+    test$cluster <- testCluster
     
-    train <- within(train, {
-        clusterHat <- predict(fit, newdata=train)
-        isTest <- F
-    })
+    # for some reason leaving the 'cluster' field causes a cluster-f***
+    train <- subset(cAtms, isTrain)
+    trainCluster <- train$cluster
+    train$cluster <- NULL
     
-    clusters <- rbind.fill(train, test)
+    # use the model to predict the clusters - even for the training set
+    train$clusterHat <- predict(fit, newdata=train)
+    train$cluster <- trainCluster
     
-    # TODO get rid of this or move it above
-    clusters <- within(clusters, {
-        clusterHat <- round(clusterHat)
-        clusterHat <- factor(clusterHat, levels=c(1:numberOfClusters))
-        cluster <- factor(cluster, levels=c(1:numberOfClusters))
-    })
+    predictions <- rbind.fill(train, test)
 })
 
 
-
+table(predictions$cluster, predictions$clusterHat)
 
 
