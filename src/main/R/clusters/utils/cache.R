@@ -1,5 +1,4 @@
-
-# TODO - use 'log4R' package instead of 'print'
+library("logging")
 
 ############################################################################ 
 # Executes an expression 'expr' and caches the result under the name 
@@ -16,13 +15,15 @@ cache <- function(cacheName, expr, cacheDir="work", clearCache=F) {
     
     # has the result already been cached?
     if(file.exists(cacheFile) && clearCache==F) {
-        print(sprintf("the result has already been cached: %s", cacheFile))
+        loginfo("Found '%s' cached as '%s'", cacheName, cacheFile)
         result <- readRDS(cacheFile)
         
-        # eval the expression and cache its result
     } else {
-        print(sprintf("the result has NOT been cached: %s", cacheFile))
+        # eval the expression and cache its result
+        loginfo("'%s' has NOT been cached", cacheName)
         result <- eval(expr)
+
+        loginfo("Cacheing '%s' as '%s'", cacheName, cacheFile)
         saveRDS(result, cacheFile)
     }
     
