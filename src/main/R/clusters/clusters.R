@@ -8,14 +8,15 @@ library("caret")
 library("fastcluster")  # overwrites stats::hclust 
 library("logging")
 
-source("utils/cache.R")
+source("../common/cache.R")
 
 # setup logging
 basicConfig(level=20)
 
 ############################################################################
 # clean and preprocess the input data
-atms <- cache("atms", {
+clusters.clean <- function() {
+  atms <- cache("atms", {
     
     # load the geo, profile and withdrawals data
     withd <- readRDS("../../resources/withdrawals.rds")
@@ -31,56 +32,64 @@ atms <- cache("atms", {
     
     # filter out any ATMs for which there is no cash usage data
     atms <- subset(atms, atm %in% unique(withd$atm))
-})
+  })
+}
 
 ############################################################################
 # transform the cash usage for each ATM into a time series
-usage <- cache("usage", {
+clusters.transform <- function() {
+  usage <- cache("usage", {
+    
+    # load the geo, profile and withdrawals data
+    withd <- readRDS("../../resources/withdrawals.rds")
     usage <- dlply(withd, "atm", function(byAtm) rev(as.vector(byAtm$usage)), .progress="text")
-        
-    # ATMs will all have time series of different lengths
-    # need most recent data first to allow time series of
-    # differing lengths to line up correctly
-    # ATM1: n=now(), n-1, n-2, n-3
-    # ATM2: n=now(), n-1, n-2, n-3, n-4
-    #u <- sapply(u, function(u) ts(rev(unlist(u))))
-    foo <- data.frame(atm=names(usage), usage=I(usage), rownames)
-    rownames(foo) <- NULL
-    foo
-})
+    
+    # ATMs will all have time series of different lengths; need most recent data 
+    # first to allow ATMs with different life spans to be compared
+    usage <- data.frame(atm=names(usage), time_series=I(usage))
+    rownames(usage) <- NULL
+    usage
+  })
+}
 
-############################################################################
-# create a 'tree' using hclust based on each ATM's cash usage time series.
-# that can be used to create any number of clusters and is rather expensive to build.
-tree <- cache("tree", {
-    hclust(dist(usage, method="DTW"))  
-})
-
-############################################################################
-# cluster the ATMs based on their cash usage time series
-cAtms <- cache("cAtms", {
-    numberOfClusters = 6
+clusters.cluster <- function(numberOfClusters) {
+  
+  ############################################################################
+  # create a 'tree' using hclust based on each ATM's cash usage time series.
+  # that can be used to create any number of clusters and is rather expensive to build.
+  tree <- cache("tree", {
+    hclust(dist(usage$time_series, method="DTW"))  
+  })
+  
+  ############################################################################
+  # cluster the ATMs based on their cash usage time series
+  cAtms <- cache("cAtms", {
+    numberOfClusters = 10
     cAtms <- atms
     rownames(cAtms) <- NULL
     
     # cluster the ATMs
     clusters <- cutree(tree, k=numberOfClusters) 
     cAtms <- within(cAtms, {
-        cluster <- sapply(atm, function(atm) as.integer(clusters[as.character(atm)]))
-        cluster <- factor(cluster, levels=c(1:numberOfClusters))       
+      cluster <- sapply(atm, function(atm) as.integer(clusters[as.character(atm)]))
+      cluster <- factor(cluster, levels=c(1:numberOfClusters))       
     })
     
     # mark the training vs test ATMs
     cAtms$isTrain <- sapply(rownames(cAtms), function(row) { 
-        row %in% createDataPartition(cAtms$cluster, p=0.8, list=F)
+      row %in% createDataPartition(cAtms$cluster, p=0.8, list=F)
     })
     
-    cAtms  # needed to ensure it is returned from code block
-})
+    cAtms  # ensures that it is cached
+  })
+  
+  return(cAtms)
+}
 
 ############################################################################
 # Create a model to predict the clusters based on the Profile/Geo data alone.
-fit <- cache("fit", {
+clusters.predict <- function() {
+  fit <- cache("fit", {
     
     # split into test and training sets
     train <- subset(cAtms, isTrain==T)
@@ -107,12 +116,13 @@ fit <- cache("fit", {
     # Now trying with formula interface which is waaay slower, but want to
     # see the predictions.
     ######################################################################
-    
-})
+  })
+}
 
 ############################################################################
 # Predict the clusters based on the Profile, Geo data alone.
-predictions <- cache("predictions", {
+clusters.score <- function() {
+  predictions <- cache("predictions", {
     
     # for some reason leaving the 'cluster' field causes a cluster-f***
     test <- subset(cAtms, !isTrain)
@@ -133,9 +143,8 @@ predictions <- cache("predictions", {
     train$cluster <- trainCluster
     
     predictions <- rbind.fill(train, test)
-})
+  })
+}
 
-
-table(predictions$cluster, predictions$clusterHat)
 
 
