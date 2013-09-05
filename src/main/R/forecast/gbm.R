@@ -13,8 +13,16 @@ trainAndScore <- function(data) {
         
         # train the model
         fit <- trainer(data, 
-                       form=usage ~ dayOfYear + dayOfSemiYear + dayOfQuarter + dayOfWeek + 
-                           weekOfMonth + weekOfYear + paydayN + holidayN + eventDistance + trandateN, 
+                       #form=usage ~ .,
+                       form=usage ~ 
+                           dayOfYear + dayOfSemiYear + dayOfQuarter + dayOfWeek + 
+                           weekOfMonth + weekOfYear + paydayN + holidayN + 
+                           eventDistance + trandateN + 
+                           woyMean + woyMin + woyMax + woySd + 
+                           moyMean + moyMin + moyMax + moySd + 
+                           dowMean + dowMin + dowMax + dowSd + 
+                           womMean + womMin + womMax + womSd + 
+                           qMean + qMin + qMax + qSd,
                        p=splitAt,
                        method="gbm", 
                        defaultTuneGrid = expand.grid(.interaction.depth=2, .n.trees=50, .shrinkage=0.1), 
