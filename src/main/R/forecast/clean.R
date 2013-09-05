@@ -1,12 +1,12 @@
 
 
 ##################################################################
-# Cleans and merges the input data frames and adds all of the necessary 
+# Cleans and merges the input data and creates all of the necessary 
 # features.  Four input data frames are required; cash, holidays, 
 # paydays, and events.  A single 'cash' data frame is returned to be used 
 # for training and prediction.
 ##################################################################
-forecast.clean <- function(libDir="../../resources") {
+clean <- function(libDir="../../resources") {
   
   # load the raw input data
   cash <- readRDS(sprintf("%s/withdrawals.rds", libDir))
