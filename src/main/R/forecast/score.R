@@ -4,7 +4,7 @@ library("caret")
 ############################################################################
 # Scores a set of predictions made by a model's 'fit'.
 ############################################################################
-forecast.score <- function(data, fit) {
+score <- function(data, fit) {
     
     if(nrow(data) > 0 && !is.null(fit)) {
         # predict the training set 
