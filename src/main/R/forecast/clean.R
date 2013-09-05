@@ -43,8 +43,12 @@ clean <- function(libDir="../../resources") {
   
   # pay days - merge with the cash data
   cash <- merge(x=cash, y=paydays, by.x="trandate", by.y="date", all.x=TRUE)
-  cash$paydayN <- as.integer(cash$payday)
-  cash$paydayN[is.na(cash$paydayN)] <- 0
+  cash$payday[is.na(cash$payday)] <- "none"
+  cash <- within(cash, {
+      payday <- as.factor(payday)
+      paydayN <- as.integer(payday)      
+  })
+
   
   # events - clean the data gathered from stub hub
   events <- rename(events, c("eventdate"="eventDate", "totalTickets"="eventTickets", "distance"="eventDistance"))
