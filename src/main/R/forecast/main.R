@@ -5,23 +5,37 @@ library("gbm")
 library("gdata")
 library("logging")
 
-#source("../common/multicore.R")
 source("../common/cache.R")
 source("clean.R")
 source("train.R")
 source("score.R")
-source("forecast.R")
+
+###
+# to switch between prediction algorithms, source the
+# appropriate file here
 source("gbm.R") 
 #source("forest.R")
 
+###
+# for parallel/multicore processing, source parallel.R
+# to load the backend and set doParallel=T
+#source("../common/parallel.R")
+doParallel=F
+
+# init logging 
 basicConfig(level=loglevels['INFO'])
 
-# load, clean and cache the input data
+# fetch and clean the input data
 cash <- cache("cash", { clean() })
 
-# forecast each ATM 
-july <- forecast(cash, by="atm", start="2013-07-01", end="2013-07-31")
+# train and score the model by atm
+scoreByAtm <- ddply(cash, "atm", trainAndScore, .parallel=doParallel)
+saveRDS(scoreByAtm, "scoreByAtm.rds")  
 
-# calculate the score for July
-score <- with(july, sum(totalScore))
-loginfo("total score for July is %.1f", score)
+# summarize the scores by day
+scoreByDate <- ddply(scoreByAtm, ~trandate, summarise, totalScore=sum(score), .parallel=doParallel)
+saveRDS(scoreByDate, "scoreByDate.rds")
+
+# calculate the scores for july
+july <- subset(scoreByDate, trandate>=as.Date("2013-07-01") & trandate<=as.Date("2013-07-31"))
+loginfo("total score for July is %.1f", with(july, sum(totalScore)))
