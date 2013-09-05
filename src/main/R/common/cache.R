@@ -1,4 +1,3 @@
-library("logging")
 
 ############################################################################ 
 # Executes an expression 'expr' and caches the result under the name 
@@ -23,6 +22,10 @@ cache <- function(cacheName, expr, cacheDir=".cache", clearCache=F) {
         loginfo("'%s' has NOT been cached", cacheName)
         result <- eval(expr)
 
+        # sanity check, just in case
+        if(0 == length(result))
+            warning("attempting to cache an empty result", immediate.=T)
+        
         loginfo("Cacheing '%s' as '%s'", cacheName, cacheFile)
         saveRDS(result, cacheFile)
     }
