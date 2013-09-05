@@ -20,6 +20,7 @@ trainAndScore <- function(data) {
                        defaultTuneGrid = expand.grid(.interaction.depth=2, .n.trees=50, .shrinkage=0.1), 
                        verbose=F, 
                        distribution="poisson")
+        saveRDS(fit, "fit.rds")
         
         # score the model
         scored <- score(data, fit)
