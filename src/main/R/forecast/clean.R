@@ -54,12 +54,13 @@ clean <- function(libDir="../../resources") {
     
     # trend summary over quarter
     by <- c("atm","quarter")
-    quarter <- ddply(cash, by, summarise, qMean=mean(usage), qMin=min(usage), qMax=max(usage), qSd=sd(usage))
-    cash <- merge(x=cash, y=quarter, by=by, all.x=T)
+    quarters <- ddply(cash, by, summarise, qMean=mean(usage), qMin=min(usage), qMax=max(usage), qSd=sd(usage))
+    cash <- merge(x=cash, y=quarters, by=by, all.x=T)
     
-    # actual last week
-    # actual last month
-    # actual last year
+    # TODO - trend summaries over the entire fleet instead of just a single ATM, wom, yom, etc?
+    # TODO - actual usage last week
+    # TODO - actual usage last month
+    # TODO - actual usage last year
     
     # holidays - clean
     holidays$holiday <- NULL
@@ -75,6 +76,11 @@ clean <- function(libDir="../../resources") {
         holidayN <- as.integer(holiday)
     })
     
+    # trend summary by holidays
+    by <- "holidayN"
+    holidays <- ddply(cash, by, summarise, holMean=mean(usage), holMin=min(usage), holMax=max(usage), holSd=sd(usage))
+    cash <- merge(x=cash, y=holidays, by=by, all.x=T)
+    
     # pay days - need to collapse multiple pay/pre/post days into one row for each atm/date
     paydays$date <- as.Date(paydays$date, format="%m/%d/%Y")
     paydays <- subset(paydays, select=c(date, payday))
@@ -87,6 +93,11 @@ clean <- function(libDir="../../resources") {
         payday <- as.factor(payday)
         paydayN <- as.integer(payday)      
     })
+    
+    # trend summary by paydays
+    by <- "paydayN"
+    paydaySumm <- ddply(cash, by, summarise, payMean=mean(usage), payMin=min(usage), payMax=max(usage), paySd=sd(usage))
+    cash <- merge(x=cash, y=paydaySumm, by=by, all.x=T)
     
     # events - clean the data gathered from stub hub
     events <- rename(events, c("eventdate"="eventDate", "totalTickets"="eventTickets", "distance"="eventDistance"))
