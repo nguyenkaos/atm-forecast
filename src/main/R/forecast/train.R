@@ -1,4 +1,6 @@
 
+
+
 onError <- function(e) {
     print(e) 
     return(NULL)
@@ -8,7 +10,7 @@ onError <- function(e) {
 # Trains a model based on the given data, formula, and 
 # tuning parameters.  The 'fit' produced by the model is returned.
 ##################################################################
-forecast.trainer <- function(data, formula, method, defaultTuneGrid, p, ...) {
+trainer <- function(data, formula, method, defaultTuneGrid, p, ...) {
     fit <- NULL
     
     # split the data for cross-validation; p specifies the break point
