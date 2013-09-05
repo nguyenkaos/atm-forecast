@@ -5,26 +5,26 @@
 # metrics.  
 ##################################################################
 trainAndScore <- function(data) {
-    
-    # cache the scored results for each ATM
     atm <- unique(as.character(data$atm))
-    cache(sprintf("gbm-%s", atm), { 
+    
+    # build and cache the fitted model
+    fit <- cache(sprintf("fit-%s", atm), { 
+        splitAt <- ymd("2013-07-01")
         
         # train the model
         fit <- trainer(data, 
-                       form=usage ~ dayOfYear + dayOfSemiYear + dayOfQuarter + 
-                           dayOfWeek + weekOfMonth + weekOfYear + paydayN + holidayN + 
-                           eventDistance + trandateN, 
-                       p=ymd("2013-06-30"),
+                       form=usage ~ dayOfYear + dayOfSemiYear + dayOfQuarter + dayOfWeek + 
+                           weekOfMonth + weekOfYear + paydayN + holidayN + eventDistance + trandateN, 
+                       p=splitAt,
                        method="gbm", 
                        defaultTuneGrid = expand.grid(.interaction.depth=2, .n.trees=50, .shrinkage=0.1), 
                        verbose=F, 
                        distribution="poisson")
-        saveRDS(fit, "fit.rds")
-        
-        # score the model
-        scored <- score(data, fit)
-        loginfo("total score for %s across train & test is %.1f", atm, sum(scored$score))
-        scored
     })
+    
+    # score the model
+    all <- score(data, fit)
+    logScore(subset(all, !(trandateN %in% fit$trainingData$trandateN)))
+    
+    return(all)
 }
