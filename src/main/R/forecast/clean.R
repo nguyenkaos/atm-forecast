@@ -33,8 +33,12 @@ clean <- function(libDir="../../resources") {
   
   # holidays - merge with the cash data
   cash <- merge(x=cash, y=holidays, by.x="trandate", by.y="date", all.x=TRUE)
-  cash$holidayN <- as.integer(cash$holiday)
-  cash$holidayN[is.na(cash$holiday)] <- 0
+  cash$holiday <- as.character(cash$holiday)
+  cash$holiday[is.na(cash$holiday)] <- "none"
+  cash <- within(cash, {
+      holiday <- as.factor(holiday)
+      holidayN <- as.integer(holiday)
+  })
   
   # pay days - need to collapse multiple pay/pre/post days into one row for each atm/date
   paydays$date <- as.Date(paydays$date, format="%m/%d/%Y")
@@ -49,7 +53,6 @@ clean <- function(libDir="../../resources") {
       paydayN <- as.integer(payday)      
   })
 
-  
   # events - clean the data gathered from stub hub
   events <- rename(events, c("eventdate"="eventDate", "totalTickets"="eventTickets", "distance"="eventDistance"))
   events$eventDate <- as.Date(events$eventDate, format="%m/%d/%Y")
