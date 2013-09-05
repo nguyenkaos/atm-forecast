@@ -1,6 +1,4 @@
 
-
-
 onError <- function(e) {
     print(e) 
     return(NULL)
