@@ -1,12 +1,10 @@
 atm-forecast
 ============
 
-GBM
----
+HOWTO
+-----
+run setup
+cp withdrawals
 $ cd atm-forecast/src/main/R/forecast
-$ ../../scripts/batchR gbm.R
+$ ../../scripts/batchR driver.R
 
-Random Forest
--------------
-$ cd atm-forecast/src/main/R/forecast
-$ ../../scripts/batchR forest.R

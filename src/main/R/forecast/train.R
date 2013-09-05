@@ -13,20 +13,15 @@ trainer <- function(data, formula, method, defaultTuneGrid, p, ...) {
     
     # split the data for cross-validation; p specifies the break point
     train <- subset(data, trandate < as.Date(p))
-    test <- subset(data, trandate >= as.Date(p))
     
     # ensure that there is enough data to train/tune
-    if(nrow(train) == 0 || nrow(test) == 0) {
-        warning(sprintf("unable to train: nrow(train)=%.0f nrow(test)=%.0f", nrow(train), nrow(test)))
+    if(nrow(train) == 0) {
+        warning(sprintf("unable to train: nrow(train)=%.0f", nrow(train)))
         return(NULL) 
     }
     
-    # mark the training versus test sets
-    test$isTest <- T 
-    train$isTest <- F
-    
     # tune/train the model - use k-fold cross-validation to tune the model parameters
-    control <- trainControl(method="repeatedcv", number=5, repeats=5)
+    control <- trainControl(method="repeatedcv", number=5, repeats=5, returnData=T)
     tryCatch(
         fit <- train(form=formula, data=train, method=method, trControl=control, ...), 
         error=onError
@@ -34,7 +29,7 @@ trainer <- function(data, formula, method, defaultTuneGrid, p, ...) {
     
     # if parameter tuning failed, use the defaults
     if(is.null(fit)) {
-        warning("could not find tuning parameters!")
+        warning("could not find tuning parameters!", immediate.=T)
         tryCatch( 
             fit <- train(form=formula, data=train, method=method, tuneGrid=defaultTuneGrid),
             error=onError
