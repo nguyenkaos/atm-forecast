@@ -5,17 +5,25 @@
 ##################################################################
 trendSummary <- function(data, by, abbrev) {
   summary <- ddply(data, by, summarise, 
-                   mean(usage, na.rm=T), 
-                   min(usage, na.rm=T), 
-                   max(usage, na.rm=T), 
-                   sd(usage, na.rm=T))
+                   mean=mean(usage, na.rm=T), 
+                   min=min(usage, na.rm=T), 
+                   max=max(usage, na.rm=T), 
+                   sd=sd(usage, na.rm=T))
+  
+  # ensure that there are no unexpected NAs
+  summary$mean[is.na(summary$mean)] <- 0
+  summary$min[is.na(summary$min)] <- 0
+  summary$max[is.na(summary$max)] <- 0
+  summary$sd[is.na(summary$sd)] <- 0
+  
+  # alter the column names
   names(summary) <- c(by, 
                       paste0(abbrev,"Mean"), 
                       paste0(abbrev,"Min"),
                       paste0(abbrev,"Max"),
                       paste0(abbrev,"Sd"))
-  summary <- merge(x=data, y=summary, by=by, all.x=T)
-  return(summary)
+  data <- merge(x=data, y=summary, by=by, all.x=T)
+  return(data)
 }
 
 ##################################################################
@@ -108,9 +116,6 @@ clean <- function(libDir="../../resources",
   cash <- trendSummary(cash, by="quarter", "quaAll")  
   cash <- trendSummary(cash, by="holidayN", "holAll")
   cash <- trendSummary(cash, by="paydayN", "payAll")
-  
-  # TODO - temporary stop gap until I can figure this out
-  cash$woySd[is.na(cash$woySd)] <- 0 
   
   return(cash)
 }
