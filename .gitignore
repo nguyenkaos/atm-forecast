@@ -41,3 +41,6 @@ Thumbs.db
 ######################
 *.Rout
 nohup.out
+.Rproj.user
+.cache
+scoreBy*.rds
