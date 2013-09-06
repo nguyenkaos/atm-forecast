@@ -36,11 +36,20 @@ long the application will run.  Each of these data sets vary in size for differe
 * usage-mini.rds - This contains a random sample of roughly 10% of all ATMs.  Each ATM within this data set contains its full 18 month history.
 * usage-micro.rds - This contains a random sample of only 3 ATMs.  This data set is useful for sanity checks during development.
 
-To run the application follow these steps.
+To run the forecast follow these steps.
 * Open a UNIX terminal.  Use Cygwin on Windows, if needed.
-* cd src/main/R/forecast
+* Change directory to that containing the forecast code.
 
-cp withdrawals
-$ cd atm-forecast/src/main/R/forecast
-$ ../../scripts/batchR driver.R
+> cd src/main/R/forecast
 
+* To ensure that the necessary R packages are installed, run the 'setup.R' script.  This only needs to be done once.
+
+> ../../scripts/batchR setup.R
+
+* Execute the main driver for the forecast with the 'micro' data set.
+
+> ../../scripts/batchR main.R
+
+* To execute the main driver with a different data set do the following.
+
+> ../../scripts/batchR main.R usage-all.rds
