@@ -26,11 +26,12 @@ source("gbm.R")
 doParallel=F
 
 # specify the "usage" data set to use
-usage = "usage-micro.rds"
 args <- commandArgs(trailingOnly=T)
-print(args)
-if(length(args) > 0)
+if(length(args) > 0) {
     usage = args[1]
+} else {
+    usage = "usage-micro.rds" 
+}
 loginfo("using the '%s' data set", usage)
 
 # fetch and clean the input data
