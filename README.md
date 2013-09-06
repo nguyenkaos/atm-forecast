@@ -1,10 +1,11 @@
 atm-forecast
 ============
 
-Source Layout
--------------
-The layout of the source code follows the Maven standard directory layout.  This should be very
-famaliar to those in the JVM universe.
+Source Code
+------------
+The main driver of the forecasting component is the file src/main/R/forecast/main.R. 
+
+The layout of the source code follows the Maven standard directory layout.  This should be very famaliar to those in the JVM universe.
 
 * src/main
   * Source code/configuration for the application
@@ -17,16 +18,27 @@ famaliar to those in the JVM universe.
 * src/test
   * Source code/configuration for all tests
 
+Execution
+---------
+A batch script has been created (src/main/scripts/batchR) that can be used to run an R script in the background.  This script will launch R in batch mode and immediately tail the log file.  You can either add the location of this script to your PATH or simply specify its absolute location.  
+
+For example, to run the setup script using 'batchR' do the following.
+
+> cd src/main/R/forecast
+> ../../script/batchR setup.R
+
 Getting Started
 ---------------
 
 There are 3 different data sets containing the daily ATM usage data.  This is the primary driver of how 
 long the application will run.  Each of these data sets vary in size for different purposes.
 * usage-all.rds - The entire data set of roughly 18 months of usage across almost 9,000 ATMs. 
-* usage-mini.rds - This contains a random sample of roughly 10% of the data set.  Each ATM within this data set contains its full 18 month history.
+* usage-mini.rds - This contains a random sample of roughly 10% of all ATMs.  Each ATM within this data set contains its full 18 month history.
 * usage-micro.rds - This contains a random sample of only 3 ATMs.  This data set is useful for sanity checks during development.
 
-run setup
+To run the application follow these steps.
+* Open a UNIX terminal.  Use Cygwin on Windows, if needed.
+* cd src/main/R/forecast
 
 cp withdrawals
 $ cd atm-forecast/src/main/R/forecast
