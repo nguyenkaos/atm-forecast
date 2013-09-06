@@ -3,13 +3,13 @@
 CODE=${1}
 LOG="${1}out"
 
-if [ $# -ne 1 ]
+if [ $# -lt 1 ]
 then
-	echo "Usage: batchR <script.R>"
+	echo "usage: batchR <script.R> <script-args>"
 	exit 1
 fi
 
-nohup R CMD BATCH --vanilla ${CODE} ${LOG} &
+nohup R CMD BATCH --vanilla "--args ${2}" ${CODE} ${LOG} &
 sleep 2
 tail -f ${LOG}
  

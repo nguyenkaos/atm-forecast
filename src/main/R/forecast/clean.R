@@ -4,7 +4,11 @@
 # to a data frame.
 ##################################################################
 trendSummary <- function(data, by, abbrev) {
-  summary <- ddply(data, by, summarise, mean(usage), min(usage), max(usage), sd(usage))
+  summary <- ddply(data, by, summarise, 
+                   mean(usage, na.rm=T), 
+                   min(usage, na.rm=T), 
+                   max(usage, na.rm=T), 
+                   sd(usage, na.rm=T))
   names(summary) <- c(by, 
                       paste0(abbrev,"Mean"), 
                       paste0(abbrev,"Min"),
@@ -20,13 +24,17 @@ trendSummary <- function(data, by, abbrev) {
 # paydays, and events.  A single 'cash' data frame is returned to be used 
 # for training and prediction.
 ##################################################################
-clean <- function(libDir="../../resources") {
+clean <- function(libDir="../../resources",
+                  usage="usage.rds",
+                  holidays="holidays.csv",
+                  events="events.csv",
+                  paydays="paydays.csv") {
   
   # load the raw input data
-  cash <- readRDS(sprintf("%s/withdrawals.rds", libDir))
-  holidays <- read.csv(sprintf("%s/holidays.csv", libDir))
-  events <- read.csv(sprintf("%s/events.csv", libDir))
-  paydays <- read.csv(sprintf("%s/paydays.csv", libDir))
+  cash <- readRDS(sprintf("%s/%s", libDir, usage))
+  holidays <- read.csv(sprintf("%s/%s", libDir, holidays))
+  events <- read.csv(sprintf("%s/%s", libDir, events))
+  paydays <- read.csv(sprintf("%s/%s", libDir, paydays))
   
   # add date related features
   cash <- within(cash, {

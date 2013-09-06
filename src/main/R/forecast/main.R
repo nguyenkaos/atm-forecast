@@ -5,6 +5,9 @@ library("gbm")
 library("gdata")
 library("logging")
 
+# init logging 
+basicConfig(level=loglevels['INFO'])
+
 source("../common/cache.R")
 source("clean.R")
 source("train.R")
@@ -22,11 +25,16 @@ source("gbm.R")
 #source("../common/parallel.R")
 doParallel=F
 
-# init logging 
-basicConfig(level=loglevels['INFO'])
+# specify the "usage" data set to use
+usage = "usage-micro.rds"
+args <- commandArgs(trailingOnly=T)
+print(args)
+if(length(args) > 0)
+    usage = args[1]
+loginfo("using the '%s' data set", usage)
 
 # fetch and clean the input data
-cash <- cache("cash", { clean() })
+cash <- cache("cash", { clean(usage=usage) })
 
 # train and score the model by atm
 scoreByAtm <- ddply(cash, "atm", trainAndScore, .parallel=doParallel)
