@@ -80,7 +80,7 @@ clean <- function(libDir="../../resources") {
   
   # events - merge with cash - collapse multiple events into 1 row for each atm/date
   cash <- merge(x=cash, y=events, all.x=TRUE, by.x=c("atm","trandate"), by.y=c("atm","eventDate"))
-  cash$event <- !is.na(cash$eventDistance)
+  #cash$event <- !is.na(cash$eventDistance)
   cash$eventDistance[is.na(cash$eventDistance)] <- 3000000  
   
   # add trend summaries specific to the ATM
@@ -88,7 +88,7 @@ clean <- function(libDir="../../resources") {
   cash <- trendSummary(cash, by=c("atm","monthOfYear"), "moy")
   cash <- trendSummary(cash, by=c("atm","dayOfWeek"), "dow")
   cash <- trendSummary(cash, by=c("atm","weekOfMonth"), "wom")
-  cash <- trendSummary(cash, by=c("atm","quarter"), "qu")
+  cash <- trendSummary(cash, by=c("atm","quarter"), "qua")
   cash <- trendSummary(cash, by=c("atm","holidayN"), "hol")
   cash <- trendSummary(cash, by=c("atm","paydayN"), "pay")  
   
@@ -97,16 +97,12 @@ clean <- function(libDir="../../resources") {
   cash <- trendSummary(cash, by="monthOfYear", "moyAll")
   cash <- trendSummary(cash, by="dayOfWeek", "dowAll")
   cash <- trendSummary(cash, by="weekOfMonth", "womAll")
-  cash <- trendSummary(cash, by="quarter", "quAll")  
+  cash <- trendSummary(cash, by="quarter", "quaAll")  
   cash <- trendSummary(cash, by="holidayN", "holAll")
   cash <- trendSummary(cash, by="paydayN", "payAll")
   
   # TODO - temporary stop gap until I can figure this out
   cash$woySd[is.na(cash$woySd)] <- 0 
-  
-  # TODO - actual usage last week
-  # TODO - actual usage last month
-  # TODO - actual usage last year  
   
   return(cash)
 }

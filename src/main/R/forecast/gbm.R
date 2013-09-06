@@ -26,7 +26,7 @@ trainAndScore <- function(data) {
                            moyMean + moyMin + moyMax + moySd + 
                            dowMean + dowMin + dowMax + dowSd + 
                            womMean + womMin + womMax + womSd + 
-                           quMean + quMin + quMax + quSd +
+                           quaMean + quaMin + quaMax + quaSd +
                            holMean + holMin + holMax + holSd +
                            payMean + payMin + payMax + paySd +
                            
@@ -35,7 +35,7 @@ trainAndScore <- function(data) {
                            moyAllMean + moyAllMin + moyAllMax + moyAllSd + 
                            dowAllMean + dowAllMin + dowAllMax + dowAllSd +  
                            womAllMean + womAllMin + womAllMax + womAllSd + 
-                           quAllMean + quAllMin + quAllMax + quAllSd + 
+                           quaAllMean + quaAllMin + quaAllMax + quaAllSd + 
                            holAllMean + holAllMin + holAllMax + holAllSd +  
                            payAllMean + payAllMin + payAllMax + payAllSd,
                        p=splitAt,
