@@ -9,7 +9,7 @@ then
 	exit 1
 fi
 
-nohup R CMD BATCH ${CODE} ${LOG} &
+nohup R CMD BATCH --vanilla ${CODE} ${LOG} &
 sleep 2
 tail -f ${LOG}
  
