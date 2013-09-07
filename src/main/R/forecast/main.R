@@ -41,13 +41,9 @@ cash <- cache("cash", { clean(usage=usage) })
 scoreByAtm <- ddply(cash, "atm", trainAndScore, .parallel=doParallel)
 saveRDS(scoreByAtm, "scoreByAtm.rds")  
 
-# summarize the scores by day
-scoreByDate <- ddply(scoreByAtm, ~trandate, summarise, score=sum(score), .parallel=doParallel)
-saveRDS(scoreByDate, "scoreByDate.rds")
-
 # calculate the scores for july
-july <- subset(scoreByDate, trandate>=as.Date("2013-07-01") & trandate<=as.Date("2013-07-31"))
-score <- sum(july$score)
-possibleScore <- nrow(july) * length(unique(cash$atm)) * 2
+july <- subset(scoreByAtm, trandate>=as.Date("2013-07-01"))
+score <- sum(july$score, na.rm=T)
+possibleScore <- nrow(july) * 2
 loginfo("July --> %.1f points or %.1f%% of points available", score, (score/possibleScore) * 100)
 
