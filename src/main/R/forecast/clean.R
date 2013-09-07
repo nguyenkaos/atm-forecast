@@ -23,6 +23,9 @@ trendSummary <- function(data, by, abbrev) {
                       paste0(abbrev,"Max"),
                       paste0(abbrev,"Sd"))
   data <- merge(x=data, y=summary, by=by, all.x=T)
+  rm(summary)
+  gc(verbose=T)
+  
   return(data)
 }
 
