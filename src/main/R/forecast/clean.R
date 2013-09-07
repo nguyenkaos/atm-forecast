@@ -16,7 +16,7 @@ trendSummary <- function(data, by, abbrev) {
   summary$max[is.na(summary$max)] <- 0
   summary$sd[is.na(summary$sd)] <- 0
   
-  # alter the column names
+  # alter the column names - for example day-of-week mean is labelled 'dowMean'
   names(summary) <- c(by, 
                       paste0(abbrev,"Mean"), 
                       paste0(abbrev,"Min"),
