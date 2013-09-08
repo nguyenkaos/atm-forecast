@@ -10,7 +10,7 @@ library("logging")
 basicConfig(level=loglevels['INFO'])
 
 source("../common/cache.R")
-source("clean.R")
+source("fetch.R")
 source("train.R")
 source("score.R")
 
@@ -29,14 +29,14 @@ doParallel=F
 # specify the "usage" data set to use
 args <- commandArgs(trailingOnly=T)
 if(length(args) > 0) {
-    usage = args[1]
+    usageFile = args[1]
 } else {
-    usage = "usage-micro.rds" 
+    usageFile = "usage-micro.rds" 
 }
-loginfo("using the '%s' data set", usage)
+loginfo("using the '%s' data set", usageFile)
 
 # fetch and clean the input data
-cash <- cache("cash", { clean(usage=usage) })
+cash <- fetch(usageFile=usageFile)
 
 # train and score the model by atm
 scoreByAtm <- ddply(cash, "atm", trainAndScore, .parallel=doParallel)
