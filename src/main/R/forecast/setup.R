@@ -17,7 +17,8 @@ setup <- function(mirror=81) {
         "gdata", 
         "randomForest", 
         "Hmisc",
-        "logging"))
+        "logging"
+        "data.table"))
 }
 
 setup()
