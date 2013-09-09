@@ -114,13 +114,10 @@ addTrend <- function(data, by, abbrev) {
     trend$sd[is.na(trend$sd)] <- 0
     
     # alter the column names - for example day-of-week mean is labelled 'dowMean'
-    names(trend) <- c(by, 
-                      paste0(abbrev,"Mean"), 
-                      paste0(abbrev,"Min"),
-                      paste0(abbrev,"Max"),
-                      paste0(abbrev,"Sd"))
+    setnames(trend, c(by, paste0(abbrev,"Mean"), paste0(abbrev,"Min"),
+                      paste0(abbrev,"Max"), paste0(abbrev,"Sd")))
     
-    loginfo("joining the trend with the original data...")
+    loginfo("joining trend with the original data...")
     print(system.time(
         data <- merge(x=data, y=trend, by=by, all.x=T)
     ))
