@@ -145,16 +145,15 @@ fetch <- function(libDir="../../resources",
                   eventsFile="events.csv",
                   paydaysFile="paydays.csv") {
     
-    # cache the results along the way to avoid rework in case of problems
-    cash <- cache("cash-no-trends", {
+    cash <- cache("cash", {
+        
+        # build the feature set including usage, holidays, paydays and events
         cash <- fetchUsage(usageFile, libDir)
         cash <- addHolidays(cash, holidaysFile, libDir)
         cash <- addPaydays(cash, paydaysFile, libDir)
         cash <- addEvents(cash, eventsFile, libDir)        
-    })
-    
-    # add trend summaries specific to the ATM
-    cash <- cache("cash-w-trends", {
+        
+        # add trend summaries specific to the ATM
         cash <- addTrend(cash, by=c("atm","weekOfYear"), "woy")
         cash <- addTrend(cash, by=c("atm","monthOfYear"), "moy")
         cash <- addTrend(cash, by=c("atm","dayOfWeek"), "dow")
@@ -162,10 +161,8 @@ fetch <- function(libDir="../../resources",
         cash <- addTrend(cash, by=c("atm","quarter"), "qua")
         cash <- addTrend(cash, by=c("atm","holidayN"), "hol")
         cash <- addTrend(cash, by=c("atm","paydayN"), "pay")         
-    })
-    
-    # add trend summaries across all of the ATMs
-    cash <- cache("cash", {
+        
+        # add trend summaries across all of the ATMs
         cash <- addTrend(cash, by="weekOfYear", "woyAll")
         cash <- addTrend(cash, by="monthOfYear", "moyAll")
         cash <- addTrend(cash, by="dayOfWeek", "dowAll")
