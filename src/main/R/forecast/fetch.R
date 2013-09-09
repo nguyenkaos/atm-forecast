@@ -99,7 +99,7 @@ addEvents <- function(cash, eventsFile, libDir) {
 addTrend <- function(data, by, abbrev) {
     loginfo("data (input) --> rows = %.0f", nrow(data))
     
-    summary <- ddply(data, by, summarise, 
+    summary <- ddply(data, by, summarise, .progress=T,
                      mean=mean(usage, na.rm=T), 
                      min=min(usage, na.rm=T), 
                      max=max(usage, na.rm=T), 
@@ -119,12 +119,14 @@ addTrend <- function(data, by, abbrev) {
                         paste0(abbrev,"Max"),
                         paste0(abbrev,"Sd"))
     
-    data <- merge(x=data, y=summary, by=by, all.x=T)
+    print(system.time(
+        data <- join(x=data, y=summary, by=by, type="left")
+    ))
     loginfo("data (output) --> rows = %.0f", nrow(data))
     
     # clean-up the excess data sets to avoid an out-of-memory
     rm(summary)
-    gc(verbose=T)
+    gc()
     
     return(data)
 }
