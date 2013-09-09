@@ -97,34 +97,37 @@ addEvents <- function(cash, eventsFile, libDir) {
 # to a data frame.
 ##################################################################
 addTrend <- function(data, by, abbrev) {
-    loginfo("data (input) --> rows = %.0f", nrow(data))
     
-    summary <- ddply(data, by, summarise, 
-                     mean=mean(usage, na.rm=T), 
-                     min=min(usage, na.rm=T), 
-                     max=max(usage, na.rm=T), 
-                     sd=sd(usage, na.rm=T))
-    loginfo("summary --> rows = %.0f", nrow(summary))
+    loginfo("creating trend by (%s)", by)
+    print(system.time(
+       trend <- data[, list(mean=mean(usage, na.rm=T), 
+                            min=min(usage, na.rm=T), 
+                            max=max(usage, na.rm=T), 
+                            sd=sd(usage, na.rm=T)), 
+                     by=by]
+    ))
     
-    # ensure that there are no unexpected NAs
-    summary$mean[is.na(summary$mean)] <- 0
-    summary$min[is.na(summary$min)] <- 0
-    summary$max[is.na(summary$max)] <- 0
-    summary$sd[is.na(summary$sd)] <- 0
+    # ensure that there are no unexpected NAs - should not need this
+    trend$mean[is.na(trend$mean)] <- 0
+    trend$min[is.na(trend$min)] <- 0
+    trend$max[is.na(trend$max)] <- 0
+    trend$sd[is.na(trend$sd)] <- 0
     
     # alter the column names - for example day-of-week mean is labelled 'dowMean'
-    names(summary) <- c(by, 
+    names(trend) <- c(by, 
                         paste0(abbrev,"Mean"), 
                         paste0(abbrev,"Min"),
                         paste0(abbrev,"Max"),
                         paste0(abbrev,"Sd"))
     
-    data <- merge(x=data, y=summary, by=by, all.x=T)
-    loginfo("data (output) --> rows = %.0f", nrow(data))
+    loginfo("joining the trend with the original data...")
+    print(system.time(
+        data <- merge(x=data, y=trend, by=by, all.x=T)
+    ))
     
     # clean-up the excess data sets to avoid an out-of-memory
-    rm(summary)
-    gc(verbose=T)
+    rm(trend)
+    gc()
     
     return(data)
 }
