@@ -100,11 +100,11 @@ addTrend <- function(data, by, abbrev) {
     
     loginfo("creating trend by (%s)", by)
     print(system.time(
-       trend <- data[, list(mean=mean(usage, na.rm=T), 
-                            min=min(usage, na.rm=T), 
-                            max=max(usage, na.rm=T), 
-                            sd=sd(usage, na.rm=T)), 
-                     by=by]
+        trend <- data[, list(mean=mean(usage, na.rm=T), 
+                             min=min(usage, na.rm=T), 
+                             max=max(usage, na.rm=T), 
+                             sd=sd(usage, na.rm=T)), 
+                      by=by]
     ))
     
     # ensure that there are no unexpected NAs - should not need this
@@ -115,10 +115,10 @@ addTrend <- function(data, by, abbrev) {
     
     # alter the column names - for example day-of-week mean is labelled 'dowMean'
     names(trend) <- c(by, 
-                        paste0(abbrev,"Mean"), 
-                        paste0(abbrev,"Min"),
-                        paste0(abbrev,"Max"),
-                        paste0(abbrev,"Sd"))
+                      paste0(abbrev,"Mean"), 
+                      paste0(abbrev,"Min"),
+                      paste0(abbrev,"Max"),
+                      paste0(abbrev,"Sd"))
     
     loginfo("joining the trend with the original data...")
     print(system.time(
@@ -163,7 +163,7 @@ fetch <- function(libDir="../../resources",
         cash <- addTrend(cash, by=c("atm","holidayN"), "hol")
         cash <- addTrend(cash, by=c("atm","paydayN"), "pay")         
     })
- 
+    
     # add trend summaries across all of the ATMs
     cash <- cache("cash", {
         cash <- addTrend(cash, by="weekOfYear", "woyAll")
