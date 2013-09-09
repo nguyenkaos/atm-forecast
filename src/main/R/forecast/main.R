@@ -5,6 +5,7 @@ library("lubridate")
 library("gbm")
 library("gdata")
 library("logging")
+library("foreach")
 
 # init logging 
 basicConfig(level=loglevels['INFO'])
@@ -39,11 +40,9 @@ loginfo("using the '%s' data set", usageFile)
 cash <- fetch(usageFile=usageFile)
 
 # train and score the model by atm
-scoreByAtm <- ddply(cash, "atm", trainAndScore, .parallel=doParallel)
-saveRDS(scoreByAtm, "scoreByAtm.rds")  
+julyScoreByAtm <- cash[, trainAndScore(.BY, .SD), by=as.character(cash$atm)]
 
 # calculate the scores for july
-july <- subset(scoreByAtm, trandate>=as.Date("2013-07-01"))
 score <- sum(july$score, na.rm=T)
 possibleScore <- nrow(july) * 2
 loginfo("July --> %.1f points or %.1f%% of points available", score, (score/possibleScore) * 100)
