@@ -4,8 +4,9 @@
 # set with all features, along with the prediction and scoring
 # metrics.  
 ##################################################################
-trainAndScore <- function(data) {
-    atm <- unique(as.character(data$atm))
+trainAndScore <- function(atm, data) {
+    #atm <- unique(as.character(data$atm))
+    loginfo("atm = %s", atm[1])
     
     # build and cache the fitted model
     fit <- cache(sprintf("fit-%s", atm), { 
@@ -49,5 +50,8 @@ trainAndScore <- function(data) {
     all <- score(data, fit)
     logScore(subset(all, !(trandateN %in% fit$trainingData$trandateN)))
     
-    return(all)
+    # return the score for July
+    july <- subset(all, trandate>=as.Date("2013-07-01"))
+    scoreInJuly <- sum(july$score, na.rm=T)
+    return(scoreInJuly)
 }
