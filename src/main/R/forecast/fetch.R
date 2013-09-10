@@ -9,6 +9,7 @@ fetchUsage <- function(usageFile, libDir) {
     cash <- readRDS(sprintf("%s/%s", libDir, usageFile))
     cash <- data.table(cash, key=c("atm","trandate"))
     cash <- within(cash, {
+        atm <- ordered(atm)
         usage <- as.integer(usage)
         trandate <- as.Date(trandate, format="%m/%d/%Y")
         trandateN <- as.integer(trandate)

@@ -4,9 +4,8 @@
 # set with all features, along with the prediction and scoring
 # metrics.  
 ##################################################################
-trainAndScore <- function(atm, data) {
-    #atm <- unique(as.character(data$atm))
-    loginfo("atm = %s", atm[1])
+trainAndScore <- function(by, data) {
+    atm <- by$atm
     
     # build and cache the fitted model
     fit <- cache(sprintf("fit-%s", atm), { 
