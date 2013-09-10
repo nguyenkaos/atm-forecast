@@ -14,6 +14,7 @@ source("../common/cache.R")
 source("fetch.R")
 source("train.R")
 source("score.R")
+source("utils.R")
 
 ###
 # to switch between prediction algorithms, source the
@@ -40,10 +41,10 @@ loginfo("using the '%s' data set", usageFile)
 cash <- fetch(usageFile=usageFile)
 
 # train and score the model by atm
-julyScoreByAtm <- cash[, trainAndScore(.BY, .SD), by=as.character(cash$atm)]
+#julyScoreByAtm <- cash[, list(score=trainAndScore(.BY, .SD)), by=atm]
+julyScoreByAtm <- cash[atm > median(atm), list(score=trainAndScore(.BY, .SD)), by=atm]
 
-# calculate the scores for july
-score <- sum(july$score, na.rm=T)
-possibleScore <- nrow(july) * 2
+# calculate the scores for july; 2 points possible for each of 31 days
+possibleScore <- nrow(julyScoreByAtm) * 2 * 31 
+score <- sum(julyScoreByAtm$score, na.rm=T)
 loginfo("July --> %.1f points or %.1f%% of points available", score, (score/possibleScore) * 100)
-
