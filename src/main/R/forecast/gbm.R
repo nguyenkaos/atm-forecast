@@ -1,3 +1,4 @@
+library("gbm")
 
 ##################################################################
 # Trains and scores a subset of data.  Returns the entire input data
@@ -19,6 +20,7 @@ trainAndScore <- function(by, data) {
                            dayOfWeek + weekOfMonth + weekOfYear + quarter + monthOfYear + 
                            
                            # paydays, holidays, events
+                           paydayN + holidayN + eventDistance +
                            
                            # usage trends specific to the ATM
                            woyMean + woyMin + woyMax + woySd + 
