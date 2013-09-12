@@ -56,5 +56,5 @@ cd src/main/R/forecast
 * To execute the main driver on only a subset of the ATMs do the following.  This is useful for running the forecast across multiple machine in parallel (albeit manually).  The argument must be a valid R expression.  The following example forecasts only the first half of the ATM set.
 
 ```Shell
-./main.R --atms="atm > median(atm)'"
+./main.R --atms="atm > median(atm)"
 ```
