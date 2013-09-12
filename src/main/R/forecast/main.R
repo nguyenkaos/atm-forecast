@@ -12,7 +12,6 @@ all_options <- list(
     make_option(c("-a", "--atms"),
                 help="An expression identifying which ATMs to forecast [default: %default (all)]",
                 default="T==T"),
-  
     make_option(c("-r", "--parallel"), 
                 action="store_true",
                 help="Run with a parallel backend enabled",
