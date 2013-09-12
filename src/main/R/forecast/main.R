@@ -23,7 +23,11 @@ all_options <- list(
                 default="INFO"),
     make_option(c("-atms", "--atms"),
                 help="An expression identifying which ATMs to forecast [default: %default (all)]",
-                default="T==T")
+                default="T==T"),
+    make_option(c("-p", "--parallel"), 
+                action="store_true",
+                help="Run with a parallel backend enabled",
+                default=F)
 )
 opts <- parse_args(OptionParser(option_list=all_options))
 
@@ -45,7 +49,8 @@ source("score.R")
 source("utils.R")
 source("gbm.R")                     # uncomment if using gbm
 #source("forest.R")                 # uncomment if using random forest
-#source("../common/parallel.R")     # uncomment for parallel/multicore processing
+
+#if(opts$parallel) source("../common/parallel.R")     
 
 basicConfig(level=loglevels[opts$logLevel])
 
