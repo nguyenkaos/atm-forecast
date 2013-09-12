@@ -7,9 +7,6 @@
 ############################################################################
 cache <- function(cacheName, expr, cacheDir=".cache", clearCache=F) {
     result <- NULL
-    
-    # create the cache directory, if necessary
-    dir.create(path=cacheDir, showWarnings=FALSE)
     cacheFile <- sprintf("%s/%s.rds", cacheDir, cacheName)
     
     # has the result already been cached?
@@ -18,7 +15,7 @@ cache <- function(cacheName, expr, cacheDir=".cache", clearCache=F) {
         result <- readRDS(cacheFile)
         
     } else {
-        # eval the expression and cache its result
+        # eval the expression 
         loginfo("'%s' has NOT been cached", cacheName)
         result <- eval(expr)
 
@@ -26,6 +23,10 @@ cache <- function(cacheName, expr, cacheDir=".cache", clearCache=F) {
         if(0 == length(result))
             warning("attempting to cache an empty result", immediate.=T)
         
+        # create the cache directory, if necessary
+        dir.create(path=cacheDir, showWarnings=FALSE)
+        
+        # cache the result
         loginfo("Cacheing '%s' as '%s'", cacheName, cacheFile)
         saveRDS(result, cacheFile)
     }
