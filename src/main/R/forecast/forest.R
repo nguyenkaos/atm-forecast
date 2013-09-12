@@ -1,3 +1,4 @@
+library("randomForest")
 
 ##################################################################
 # Trains and scores a set of data.  Returns the entire input data
