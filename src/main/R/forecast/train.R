@@ -21,7 +21,7 @@ trainer <- function(data, formula, method, defaultTuneGrid, p, ...) {
     }
     
     # tune/train the model - use k-fold cross-validation to tune the model parameters
-    control <- trainControl(method="repeatedcv", number=5, repeats=5, returnData=T)
+    control <- trainControl(method="repeatedcv", number=5, repeats=5, returnData=T, allowParallel=T)
     tryCatch(
         fit <- train(form=formula, data=train, method=method, trControl=control, ...), 
         error=onError

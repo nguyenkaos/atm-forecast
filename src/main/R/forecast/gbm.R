@@ -1,3 +1,4 @@
+library("gbm")
 
 ##################################################################
 # Trains and scores a subset of data.  Returns the entire input data
@@ -11,7 +12,7 @@ trainAndScore <- function(by, data) {
     fit <- cache(sprintf("fit-%s", atm), { 
         splitAt <- ymd("2013-07-01")
         
-        # train the model
+        # train the model   
         fit <- trainer(data, 
                        form=usage ~ 
                            # date related features
@@ -47,10 +48,10 @@ trainAndScore <- function(by, data) {
     
     # score the model
     all <- score(data, fit)
-    logScore(subset(all, !(trandateN %in% fit$trainingData$trandateN)))
+    testData <- subset(all, !(trandateN %in% fit$trainingData$trandateN))
+    logScore(atm, testData)
     
     # return the score for July
     july <- subset(all, trandate>=as.Date("2013-07-01"))
-    scoreInJuly <- sum(july$score, na.rm=T)
-    return(scoreInJuly)
+    return(sum(july$score, na.rm=T))
 }
