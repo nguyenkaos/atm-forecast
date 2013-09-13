@@ -57,10 +57,10 @@ points <- function(mape) {
 ############################################################################
 # Logs the total score and percentage of possible from a scored data set.
 ############################################################################
-logScore <- function(scored) {
+logScore <- function(atm, scored) {
     score <- sum(scored$score)
     possibleScore <- nrow(scored) * 2
     perc <- (score/possibleScore) * 100
-    loginfo("Scores --> %.1f points or %.1f%% of points available", score, perc)
+    loginfo("%s --> %.1f points or %.1f%% of points available", atm, score, perc)
 }
 

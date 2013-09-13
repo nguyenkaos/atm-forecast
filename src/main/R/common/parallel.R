@@ -3,6 +3,8 @@
 # when using Plyr.
 ############################################################################
 
-library("doMC")
-registerDoMC(cores = 8)
+#library("doMC")
+#registerDoMC(cores = 8)
 
+library("parallel")
+cl <- makeCluster(detectCores())

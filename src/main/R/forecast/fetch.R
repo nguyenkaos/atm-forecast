@@ -3,10 +3,10 @@
 # Fetches the ATM usage data and builds a set of features related
 # to the date.
 ##################################################################
-fetchUsage <- function(usageFile, libDir) {
+fetchUsage <- function(usageFile, dataDir) {
     
     # add date related features
-    cash <- readRDS(sprintf("%s/%s", libDir, usageFile))
+    cash <- readRDS(sprintf("%s/%s", dataDir, usageFile))
     cash <- data.table(cash, key=c("atm","trandate"))
     cash <- within(cash, {
         atm <- ordered(atm)
@@ -31,10 +31,10 @@ fetchUsage <- function(usageFile, libDir) {
 # Fetches the holidays data and merges this with the original
 # data set.
 ##################################################################
-addHolidays <- function(cash, holidaysFile, libDir) {
+addHolidays <- function(cash, holidaysFile, dataDir) {
     
     # holidays - clean
-    holidays <- read.csv(sprintf("%s/%s", libDir, holidaysFile))
+    holidays <- read.csv(sprintf("%s/%s", dataDir, holidaysFile))
     holidays$holiday <- NULL
     holidays$date <- as.Date(holidays$date, format="%m/%d/%Y")
     holidays <- rename(holidays, c("date"="trandate", "impact"="holiday"))
@@ -52,10 +52,10 @@ addHolidays <- function(cash, holidaysFile, libDir) {
     return(cash)
 }
 
-addPaydays <- function(cash, paydaysFile, libDir) {
+addPaydays <- function(cash, paydaysFile, dataDir) {
     
     # pay days - need to collapse multiple pay/pre/post days into one row for each atm/date
-    paydays <- read.csv(sprintf("%s/%s", libDir, paydaysFile))
+    paydays <- read.csv(sprintf("%s/%s", dataDir, paydaysFile))
     paydays$trandate <- as.Date(paydays$date, format="%m/%d/%Y")
     paydays <- subset(paydays, select=c(trandate, payday))
     paydays <- ddply(paydays, "trandate", summarise, payday = paste(payday, collapse="+"))
@@ -72,10 +72,10 @@ addPaydays <- function(cash, paydaysFile, libDir) {
     return(cash)
 }
 
-addEvents <- function(cash, eventsFile, libDir) {
+addEvents <- function(cash, eventsFile, dataDir) {
     
     # events - clean the data gathered from stub hub
-    events <- read.csv(sprintf("%s/%s", libDir, eventsFile))
+    events <- read.csv(sprintf("%s/%s", dataDir, eventsFile))
     events <- rename(events, c("eventdate"="trandate", 
                                "totalTickets"="eventTickets", 
                                "distance"="eventDistance"))
@@ -137,7 +137,7 @@ addTrend <- function(data, by, abbrev) {
 # paydays, and events.  A single 'cash' data frame is returned to be used 
 # for training and prediction.
 ##################################################################
-fetch <- function(libDir="../../resources",
+fetch <- function(dataDir="../../resources",
                   usageFile="usage-micro.rds",
                   holidaysFile="holidays.csv",
                   eventsFile="events.csv",
@@ -146,10 +146,10 @@ fetch <- function(libDir="../../resources",
     cash <- cache("cash", {
         
         # build the feature set including usage, holidays, paydays and events
-        cash <- fetchUsage(usageFile, libDir)
-        cash <- addHolidays(cash, holidaysFile, libDir)
-        cash <- addPaydays(cash, paydaysFile, libDir)
-        cash <- addEvents(cash, eventsFile, libDir)        
+        cash <- fetchUsage(usageFile, dataDir)
+        cash <- addHolidays(cash, holidaysFile, dataDir)
+        cash <- addPaydays(cash, paydaysFile, dataDir)
+        cash <- addEvents(cash, eventsFile, dataDir)        
         
         # add trend summaries specific to the ATM
         cash <- addTrend(cash, by=c("atm","weekOfYear"), "woy")
