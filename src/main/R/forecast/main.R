@@ -73,10 +73,13 @@ cash <- fetch(usageFile=opts$usageFile,
               paydaysFile=opts$paydaysFile, 
               dataDir=opts$dataDir)
 
-# train and score the model by atm
-julyScoreByAtm <- cash[eval(parse(text=opts$atms)), 
-                       list(score=trainAndScore(.BY, .SD)), 
-                       by=atm]
+
+julyScoreByAtm <- cache("julyScoreByAtm", {
+    # train and score the model by atm
+    cash[eval(parse(text=opts$atms)), 
+         list(score=trainAndScore(.BY, .SD)), 
+         by=atm]
+})
 
 # calculate the scores for july; 2 points possible for each of 31 days
 possibleScore <- nrow(julyScoreByAtm) * 2 * 31 
