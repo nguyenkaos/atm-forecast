@@ -3,6 +3,7 @@ library(RCurl)
 library(RJSONIO)
 library(data.table)
 library(logging)
+library(Hmisc)
 
 #
 # http://platform.seatgeek.com/
@@ -10,84 +11,76 @@ library(logging)
 SeatGeekR <- proto(expr={
     
     baseURL <- NULL
+    META_IND <- 1
+    PAGE_IND <- 2
     
     # constructor
-    new <- function(self, baseURL="http://api.seatgeek.com/2") {
-        self$proto(baseURL=baseURL)
+    new <- function(., baseURL="http://api.seatgeek.com/2") {
+        .$proto(baseURL=baseURL)
     }
     
     # search for events
-    events <- function(self, ..., verbose=F) {
-        self$fetch("events", ..., verbose=verbose)
+    events <- function(., ..., verbose=F) {
+        .$fetch("events", ..., verbose=verbose)
     }
     
     # search for performers
-    performers <- function(self, ..., verbose=F) {
-        self$fetch("performers", ..., verbose=verbose)
+    performers <- function(., ..., verbose=F) {
+        .$fetch("performers", ..., verbose=verbose)
     }
     
     # search for venues
-    venues <- function(self, ..., verbose=F) {
-        self$fetch("venues", ..., verbose=verbose)
+    venues <- function(., ..., verbose=F) {
+        .$fetch("venues", ..., verbose=verbose)
     }
     
     # search for taxonomies
-    taxonomies <- function(self, ..., verbose=F) {
-        self$fetch("taxonomies", ..., verbose=verbose)
+    taxonomies <- function(., ..., verbose=F) {
+        .$fetch("taxonomies", ..., verbose=verbose)
     }
     
-    fetch <- function(self, what, ..., perPage=20, verbose=F) {
-        # fetch the first page
-        result <- self$fetchPage(what, 1, perPage, ..., verbose=verbose)  
-        page1 <- result[[2]]
-        loginfo("page 1 has %.0f results", length(page1))
+    fetch <- function(., what, ..., perPage=20, verbose=F) {
+        pages <- NULL
+        pageNum <- 1
+        repeat {
+            # fetch a page
+            result <- .$fetchPage(what, pageNum, perPage, ..., verbose=verbose)  
+            page <- result[[.$PAGE_IND]]
+            meta <- result[[.$META_IND]]
         
-        # how many pages are there?
-        meta <- result[[1]]
-        total <- meta$total
-        perPage <- meta$per_page
-        numberOfPages <- ceiling(total/perPage)
-        loginfo("there are %.0f total across %.0f pages", total, numberOfPages)
-        
-        # fetch the remainder of the pages, if required
-        page2Plus <- NULL
-        if(numberOfPages > 1) {
-            page2Plus <- sapply(2:numberOfPages, function(pageNum) {
-                page <- self$fetchPage(what, pageNum, perPage, ..., verbose=verbose)[[2]]
-                loginfo("page %.0f has %.0f results", pageNum, length(page))
-                return(page)
-            })
+            # how many pages are there?
+            numOfPages <- ceiling(meta$total/meta$per_page)
+            loginfo("there is %.0f total across %.0f pages", meta$total, numOfPages)
+
+            loginfo("page %.0f has %.0f results", pageNum, length(page))
+            pages <- append(pages, page)
+            
+            inc(pageNum) <- 1
+            if(pageNum > numOfPages) 
+                break;
         }
         
-        # page2Plus is a list of lists - each sub-list is for the page
-        # page1 is just one list
-        # how to merge these at the same level?
-        append(page1, unlist(page2Plus))
+        # flatten the list into a data frame
+        pages <- nameList(pages, what)
+        toDataTable(pages)
     }   
     
-    #
-    # Returns a single page of results from the Seat Geek API.
-    #
-    fetchPage <- function(self, what, pageNum, perPage, ..., verbose=F) {
-        loginfo("fetching page %.0f with %.0f results per page", pageNum, perPage)
+    # fetch a single page of results from the Seat Geek API
+    fetchPage <- function(., what, pageNum, perPage, ..., verbose=F) {
         
-        # fetch a page of results
-        url <- paste(self$baseURL, what, sep="/")
+        # fetch the raw json
+        url <- paste(.$baseURL, what, sep="/")
         json <- getForm(url, .opts=curlOptions(verbose=verbose), page=pageNum, per_page=perPage, ...)
-        page <- fromJSON(json)
         
-        # ensure that element has a unique name
-        page[[2]] <- nameEach(page[[2]], what)
-        page
+        # json to a page
+        page <- fromJSON(json)
     }
 })
 
-##
-# Ensures that each list element has a unique name.
-#
-nameEach <- function(aList, baseName, recursive=T) {
+# ensures that each list element has a unique name.
+nameList <- function(aList, baseName, recursive=T) {
     
-    # nothing to do; also ends recursion
+    # nothing to do
     if(length(aList)==0)
         return(aList)
     
@@ -96,13 +89,13 @@ nameEach <- function(aList, baseName, recursive=T) {
         names(aList) <- paste(baseName, 1:length(aList), sep=".")
     }
     
+    # recursively rename any sub-lists
     if(recursive) {
-        # recursively rename any sub-lists
         attrNames <- attributes(aList)$names
         for(i in 1:length(attrNames)) {
             attr <- aList[[i]]
             if(is.list(attr)) {
-                aList[[i]] <- nameEach(attr, attrNames[[i]])
+                aList[[i]] <- nameList(attr, attrNames[[i]])
             }
         }
     }
@@ -110,11 +103,10 @@ nameEach <- function(aList, baseName, recursive=T) {
     return(aList)
 }
 
-##
-# 
-# 
+# converts a list to a data table
 toDataTable <- function(aList) {
-    matrix <- do.call(rbind.fill.matrix, lapply(aList, function(l) t(unlist(l))))
+    matrix <- do.call(rbind.fill.matrix, 
+                      lapply(aList, function(l) t(unlist(l))))
     data.table(matrix)        
 }
 

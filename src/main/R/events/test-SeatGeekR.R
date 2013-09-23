@@ -1,16 +1,15 @@
 
-
+library("logging")
 library("plyr")
+
+source("SeatGeekR.R")
 basicConfig(level="INFO")
 
-
-# even with stats hard to tell magnitude of the event
-# a performer can contibute to magnitude
-# a venue can contribute to the magnitude
-    
-source("SeatGeekR.R")
+# grab events around the Ohio Stadium
 geek <- SeatGeekR$new()
-result <- geek$events(lat=40.0032, lon=-83.0195, range="1mi", perPage=50) # ohio stadium
+events <- geek$events(lat=40.0032, lon=-83.0195, range="1mi", perPage=50) 
+
+
 
 
 
