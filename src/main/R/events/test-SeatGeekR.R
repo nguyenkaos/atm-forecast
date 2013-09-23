@@ -11,6 +11,12 @@ geek <- SeatGeekR$new()
 #result <- geek$venues(lat=40.0032, lon=-83.0195, range="1mi")
 result <- geek$events(lat=40.0032, lon=-83.0195, range="1mi", datetime_utc.gt="2012-09-07")
 
+# attempt 3
+rows <- result$meta$per_page
+unlist <- unlist(result$events[[2]], recursive=T)
+m <- matrix(unlist, nrow=rows)
+
+
 # attempt 2
 flat <- do.call(c, unlist(result$events, recursive=F))
 eventFields <- c(1, 6, 9, 324) # event id, title, type, datetime_utc
