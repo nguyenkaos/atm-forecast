@@ -5,7 +5,7 @@
 # returned from the cache instead of re-calculated.  This can save significant 
 # time for functions that don't need to always be re-run. 
 ############################################################################
-cache <- function(cacheName, expr, cacheDir=".cache2", clearCache=F) {
+cache <- function(cacheName, expr, cacheDir=".cache", clearCache=F) {
     result <- NULL
     cacheFile <- sprintf("%s/%s.rds", cacheDir, cacheName)
     
