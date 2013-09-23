@@ -46,7 +46,7 @@ trainAndScore <- function(by, data) {
                        distribution="poisson")
     })
     
-    scoreInJuly <- 0
+    scoreInJuly <- scoreInAug <- 0
     if(!is.null(fit)) {
         
         # score the model
@@ -55,8 +55,12 @@ trainAndScore <- function(by, data) {
         logScore(atm, testData)
         
         # calculate the score for July
-        july <- subset(all, trandate>=as.Date("2013-07-01"))
-        scoreInJuly <- sum(july$score, na.rm=T)
+        #july <- subset(all, trandate>=as.Date("2013-07-01") & trandate<=("2013-07-31"))
+        #scoreInJuly <- sum(july$score, na.rm=T)
+        
+        # calculate the score for August
+        aug <- subset(all, trandate>=as.Date("2013-08-01") & trandate<=("2013-08-31"))
+        scoreInAug <- sum(aug$score, na.rm=T)
         
     } else {
         
@@ -64,5 +68,5 @@ trainAndScore <- function(by, data) {
         warning("Not enough training data for ATM ", atm)
     }
         
-    return(scoreInJuly)
+    return(scoreInAug)
 }
