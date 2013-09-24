@@ -5,6 +5,8 @@ library(data.table)
 library(logging)
 library(Hmisc)
 
+source("Common.R")
+
 #
 # http://platform.seatgeek.com/
 #
@@ -101,12 +103,5 @@ nameList <- function(aList, baseName, recursive=T) {
     }
     
     return(aList)
-}
-
-# converts a list to a data table
-toDataTable <- function(aList) {
-    matrix <- do.call(rbind.fill.matrix, 
-                      lapply(aList, function(l) t(unlist(l))))
-    data.table(matrix)        
 }
 
