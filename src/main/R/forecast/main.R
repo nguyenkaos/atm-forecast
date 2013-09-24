@@ -76,15 +76,12 @@ cash <- fetch(usageFile=opts$usageFile,
 
 # train and score the model by atm
 scoreByAtm <- cache("scoreByAtm", {
-    cash[, 
-         list(score=trainAndScore(.BY, .SD)), 
-         by=atm]
+    cash[, list(score=trainAndScore(.BY, .SD)), by=atm]
 })
 
-# calculate the scores for july; 2 points possible for each of 31 days
-possibleScore <- nrow(scoreByAtm) * 2 * 31 
+# calculate the total score over the test set
 score <- sum(scoreByAtm$score, na.rm=T)
-loginfo("July --> %.1f points or %.1f%% of points available", score, (score/possibleScore) * 100)
+loginfo("Test Set Score --> %.1f points", score)
 
 
 
