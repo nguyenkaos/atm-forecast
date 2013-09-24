@@ -39,7 +39,7 @@ SeatGeekR <- proto(expr={
         .$fetch("taxonomies", ..., verbose=verbose)
     }
     
-    fetch <- function(., what, ..., perPage=20, verbose=F) {
+    fetch <- function(., what, ..., perPage=200, verbose=F) {
         pages <- NULL
         pageNum <- 1
         repeat {

@@ -1,29 +1,37 @@
+#!/usr/bin/env Rscript
 
-library("data.table")
+library("logging")
 library("plyr")
 
 source("SeatGeekR.R")
+source("../common/cache.R")
+
+basicConfig(level="INFO")
 
 fetchEvents <- function() {
     
-    # find the location of each ATM
-    geo <- readRDS("../../resources/profiles.rds")
-    geo <- subset(geo, select=c("terminal_id","LATITUDE","LONGITUDE"))
-    names(geo) <- c("atm","lat","lon")
+    # fetch the profiles for each ATM
+    profiles <- readRDS("../../resources/profiles.rds")
+    profiles <- subset(profiles, select=c(terminal.id, latitude, longitude))
+    #profiles <- profiles[1:10,]
     
-    # find the start/end of the usage data for each ATM
-    usage <- readRDS("../../resources/usage-all.rds")
-    usage <- data.table(usage)
-    usage <- usage[,list(min=min(trandate), max=max(trandate)), by=atm]
-    
-    # merge the data sets
-    atms <- merge(usage, geo, by="atm")
-    
-    # find all events close to each atm
-    atms <- atms[1:100,]
-    
+    # grab events near any of the ATMs
     geek <- SeatGeekR$new()
-    events <- ddply(atms, atm, function(atm) {
-        geek$events(lat=atm$lat, lon=atm$lon, range="1mi", datetime_utc.gte=atm$min)
-    })    
+    events <- ddply(profiles, "terminal.id", function(p) {
+        loginfo("fetching events for atm %s", p$terminal.id)
+        
+        events <- NULL
+        if(is.na(p$latitude) || is.na(p$longitude)) {
+            loginfo("missing location for ATM %s", p$terminal.id)
+        } else {
+            events <- geek$events(lat=p$latitude, lon=p$longitude, range="1mi")
+        }
+        
+        return(events)
+    })
+    
+    events <- rename(events, c("id"="event.id"))
 }
+
+events <- cache("events", fetchEvents())
+
