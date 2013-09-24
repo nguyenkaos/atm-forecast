@@ -1,11 +1,11 @@
-library(proto)
-library(RCurl)
-library(RJSONIO)
-library(data.table)
-library(logging)
-library(Hmisc)
+library("proto")
+library("RCurl")
+library("RJSONIO")
+library("data.table")
+library("logging")
+library("Hmisc")
 
-source("Common.R")
+source("common.R")
 
 #
 # http://platform.seatgeek.com/
@@ -41,7 +41,7 @@ SeatGeekR <- proto(expr={
         .$fetch("taxonomies", ..., verbose=verbose)
     }
     
-    fetch <- function(., what, ..., perPage=200, verbose=F) {
+    fetch <- function(., what, ..., perPage=2000, verbose=F) {
         pages <- NULL
         pageNum <- 1
         repeat {
@@ -49,14 +49,13 @@ SeatGeekR <- proto(expr={
             result <- .$fetchPage(what, pageNum, perPage, ..., verbose=verbose)  
             page <- result[[.$PAGE_IND]]
             meta <- result[[.$META_IND]]
-        
-            # how many pages are there?
-            numOfPages <- ceiling(meta$total/meta$per_page)
-            loginfo("there is %.0f total across %.0f pages", meta$total, numOfPages)
-
-            loginfo("page %.0f has %.0f results", pageNum, length(page))
             pages <- append(pages, page)
             
+            # how many pages are there?
+            numOfPages <- ceiling(meta$total/meta$per_page)
+            loginfo("fetched page %.0f/%.0f with %.0f/%.0f results", pageNum, numOfPages, length(page), meta$total)
+            
+            # are there more pages to fetch?
             inc(pageNum) <- 1
             if(pageNum > numOfPages) 
                 break;
@@ -70,9 +69,11 @@ SeatGeekR <- proto(expr={
     # fetch a single page of results from the Seat Geek API
     fetchPage <- function(., what, pageNum, perPage, ..., verbose=F) {
         
+        opts <- curlOptions(verbose=verbose, followlocation=T, useragent="R", ssl.verifypeer=F)
+        
         # fetch the raw json
         url <- paste(.$baseURL, what, sep="/")
-        json <- getForm(url, .opts=curlOptions(verbose=verbose), page=pageNum, per_page=perPage, ...)
+        json <- getForm(url, .opts=opts, page=pageNum, per_page=perPage, ...)
         
         # json to a page
         page <- fromJSON(json)
