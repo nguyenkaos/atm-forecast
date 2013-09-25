@@ -1,7 +1,7 @@
 #!/usr/bin/env Rscript
 
 library("doSNOW")
-registerDoSNOW(cl <-makeCluster(8, type="SOCK", outfile=""))
+registerDoSNOW(cl <- makeCluster(4, type="SOCK", outfile=""))
 
 library("logging")
 library("plyr")
