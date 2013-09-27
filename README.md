@@ -1,27 +1,6 @@
 atm-forecast
 ============
 
-Source Code
-------------
-The main driver of the forecasting component is the file src/main/R/forecast/main.R. 
-
-The layout of the source code follows the Maven standard directory layout.  This should be very famaliar to those in the JVM universe.
-
-* ${ROOT}/src/main - Source code/configuration for the application
-* ${ROOT}/src/main/R - R source code
-* ${ROOT}/src/main/resources - Required data sets
-* ${ROOT}/src/main/scripts - Scripts to assist running the application
-* ${ROOT}/src/test - Source code/configuration for all tests
-
-Data Sets
-----------
-
-There are 3 different data sets containing the daily ATM usage data.  This is the primary driver of how 
-long the application will run.  Each of these data sets vary in size for different purposes.
-* usage-all.rds - The entire data set of roughly 18 months of usage across almost 9,000 ATMs. 
-* usage-mini.rds - This contains a random sample of roughly 10% of all ATMs.  Each ATM within this data set contains its full 18 month history.
-* usage-micro.rds - This contains a random sample of only 3 ATMs.  This data set is useful for sanity checks during development.
-
 Getting Started
 ---------------
 
@@ -58,3 +37,25 @@ cd src/main/R/forecast
 ```Shell
 ./main.R --atms="atm > median(atm)"
 ```
+
+Source Code
+------------
+The main driver of the forecasting component is the file src/main/R/forecast/main.R. 
+
+The layout of the source code follows the Maven standard directory layout.  This should be very famaliar to those in the JVM universe.
+
+* ${ROOT}/src/main - Source code/configuration for the application
+* ${ROOT}/src/main/R - R source code
+* ${ROOT}/src/main/resources - Required data sets
+* ${ROOT}/src/main/scripts - Scripts to assist running the application
+* ${ROOT}/src/test - Source code/configuration for all tests
+
+Data Sets
+----------
+
+There are 3 different data sets containing the daily ATM usage data.  This is the primary driver of how 
+long the application will run.  Each of these data sets vary in size for different purposes.
+* usage-all.rds - The entire data set of roughly 18 months of usage across almost 9,000 ATMs. 
+* usage-mini.rds - This contains a random sample of roughly 10% of all ATMs.  Each ATM within this data set contains its full 18 month history.
+* usage-micro.rds - This contains a random sample of only 3 ATMs.  This data set is useful for sanity checks during development.
+
