@@ -9,8 +9,8 @@ all_options <- list(
     make_option(c("-m", "--model"),
                 help="The model to use for forecasting; gbm, forest [default: %default]",
                 default="gbm"),  
-    make_option(c("-a", "--atms"),
-                help="An expression identifying which ATMs to forecast [default: %default (all)]",
+    make_option(c("-s", "--subset"),
+                help="An expression to identify a subset of ATMs to be forecasts [default: %default (all)]",
                 default="T==T"),
     make_option(c("-r", "--parallel"), 
                 action="store_true",
@@ -67,9 +67,14 @@ cash <- fetch(usageFile    = opts$usageFile,
               paydaysFile  = opts$paydaysFile, 
               dataDir      = opts$dataDir)
 
+# a subset expression can be provided to limit the number of ATMs that will be forecasted
+subsetExpr <- parse(text=opts$subset)
+
 # train and score the model by atm
 scoreByAtm <- cache("scoreByAtm", {
-    cash[, c("usageHat","mape","score"):=trainAndScore(.BY, .SD), by=atm]
+    cash[eval(subsetExpr), 
+         c("usageHat","mape","score"):=trainAndScore(.BY, .SD), 
+         by=atm]
 })
 
 # show a small portion of the resulting scores by atm
