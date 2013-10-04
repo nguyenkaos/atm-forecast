@@ -50,14 +50,8 @@ source("train.R")
 source("score.R")
 source("utils.R")
 
-# which model should be used?
-if(opts$model=="gbm") {
-    source("gbm.R")           
-} else if(opts$model=="forest") { 
-    source("forest.R") 
-} else {
-    stop(sprintf("invalid model: %s", opts$model))
-}
+# if '--model' argument is 'gbm', then 'gbm.R' will be sourced
+source(paste0(opts$model, ".R"))
 
 # run multiple threads/cores
 if(opts$parallel) {
@@ -72,7 +66,6 @@ cash <- fetch(usageFile=opts$usageFile,
               eventsFile=opts$eventsFile, 
               paydaysFile=opts$paydaysFile, 
               dataDir=opts$dataDir)
-
 
 # train and score the model by atm
 scoreByAtm <- cache("scoreByAtm", {
