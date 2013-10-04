@@ -46,27 +46,16 @@ trainAndScore <- function(by, data) {
                        distribution="poisson")
     })
     
-    scoreInJuly <- scoreInAug <- 0
+    result <- NULL
     if(!is.null(fit)) {
-        
         # score the model
-        all <- score(data, fit)
-        testData <- subset(all, !(trandateN %in% fit$trainingData$trandateN))
-        logScore(atm, testData)
-        
-        # calculate the score for July
-        #july <- subset(all, trandate>=as.Date("2013-07-01") & trandate<=("2013-07-31"))
-        #scoreInJuly <- sum(july$score, na.rm=T)
-        
-        # calculate the score for August
-        aug <- subset(all, trandate>=as.Date("2013-08-01") & trandate<=("2013-08-31"))
-        scoreInAug <- sum(aug$score, na.rm=T)
-        
+        scored <- score(data, fit)
+        result <- list(scored$usageHat, scored$mape, scored$score)
+
     } else {
-        
         # most likely there was not enough training data for this ATM
         warning("Not enough training data for ATM ", atm)
     }
-        
-    return(scoreInAug)
+    
+    return(result)
 }

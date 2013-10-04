@@ -61,20 +61,22 @@ if(opts$parallel) {
 basicConfig(level=loglevels[opts$logLevel])
 
 # fetch and clean the input data
-cash <- fetch(usageFile=opts$usageFile, 
-              holidaysFile=opts$holidaysFile, 
-              eventsFile=opts$eventsFile, 
-              paydaysFile=opts$paydaysFile, 
-              dataDir=opts$dataDir)
+cash <- fetch(usageFile    = opts$usageFile, 
+              holidaysFile = opts$holidaysFile, 
+              eventsFile   = opts$eventsFile, 
+              paydaysFile  = opts$paydaysFile, 
+              dataDir      = opts$dataDir)
 
 # train and score the model by atm
 scoreByAtm <- cache("scoreByAtm", {
-    cash[, list(score=trainAndScore(.BY, .SD)), by=atm]
+    cash[, c("usageHat","mape","score"):=trainAndScore(.BY, .SD), by=atm]
 })
 
-# calculate the total score over the test set
-score <- sum(scoreByAtm$score, na.rm=T)
-loginfo("Test Set Score --> %.1f points", score)
+# show a small portion of the resulting scores by atm
+scoreByAtm <- subset(scoreByAtm, select=c(atm,trandate,usage,usageHat,mape,score))
+head(scoreByAtm)
+loginfo("forecasting complete")
+
 
 
 
