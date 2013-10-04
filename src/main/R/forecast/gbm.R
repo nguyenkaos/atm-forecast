@@ -5,12 +5,12 @@ library("gbm")
 # set with all features, along with the prediction and scoring
 # metrics.  
 ##################################################################
-trainAndScore <- function(by, data) {
+trainAndScore <- function(by, data, splitAt="2013-07-01") {
     atm <- by$atm
+    loginfo("Training '%s' with test/train split at '%s'", atm, splitAt)
     
     # build and cache the fitted model
     fit <- cache(sprintf("fit-%s", atm), { 
-        splitAt <- ymd("2013-07-01")
         
         # train the model   
         fit <- trainer(data, 
@@ -39,7 +39,7 @@ trainAndScore <- function(by, data) {
                            quaAllMean + quaAllMin + quaAllMax + quaAllSd + 
                            holAllMean + holAllMin + holAllMax + holAllSd +  
                            payAllMean + payAllMin + payAllMax + payAllSd,
-                       p=splitAt,
+                       p=as.Date(splitAt),
                        method="gbm", 
                        defaultTuneGrid = expand.grid(.interaction.depth=2, .n.trees=50, .shrinkage=0.1), 
                        verbose=F, 
