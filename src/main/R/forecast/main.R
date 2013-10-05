@@ -3,6 +3,9 @@
 # defines the options/arguments
 library("optparse")
 all_options <- list(
+    make_option(c("--forecastOut"),
+                help="How far out to forecast in days.",
+                default=120),
     make_option(c("--splitAt"),
                 help="Date at which to split data into training vs test [default: %default]",
                 default="2013-08-15"),
@@ -68,7 +71,8 @@ cash <- fetch(usageFile    = opts$usageFile,
               holidaysFile = opts$holidaysFile, 
               eventsFile   = opts$eventsFile, 
               paydaysFile  = opts$paydaysFile, 
-              dataDir      = opts$dataDir)
+              dataDir      = opts$dataDir,
+              populateTo   = today() + opts$forecastOut)
 
 # a subset expression can be provided to limit the number of ATMs that will be forecasted
 subsetExpr <- parse(text=opts$subset)

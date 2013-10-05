@@ -31,14 +31,18 @@ fetchUsage <- function(usageFile, dataDir) {
 # Fetches the holidays data and merges this with the original
 # data set.
 ##################################################################
-addHolidays <- function(cash, holidaysFile, dataDir) {
+addHolidays <- function(cash, holidaysFile, dataDir, populateTo) {
     
     # holidays - clean
     holidays <- read.csv(sprintf("%s/%s", dataDir, holidaysFile))
     holidays$holiday <- NULL
-    holidays$date <- as.Date(holidays$date, format="%m/%d/%Y")
+    holidays$date <- as.Date(holidays$date)
     holidays <- rename(holidays, c("date"="trandate", "impact"="holiday"))
     holidays <- data.table(holidays, key="trandate")
+    
+    # ensure that the holidays data set is complete
+    if(max(holidays$trandate, na.rm=T) < populateTo)
+        stop(sprintf("missing holidays data up to %s", populateTo))
     
     # holidays - merge with the cash data
     cash <- merge(x=cash, y=holidays, by="trandate", all.x=T)
@@ -52,13 +56,17 @@ addHolidays <- function(cash, holidaysFile, dataDir) {
     return(cash)
 }
 
-addPaydays <- function(cash, paydaysFile, dataDir) {
+addPaydays <- function(cash, paydaysFile, dataDir, populateTo) {
     
     # pay days - need to collapse multiple pay/pre/post days into one row for each atm/date
     paydays <- read.csv(sprintf("%s/%s", dataDir, paydaysFile))
-    paydays$trandate <- as.Date(paydays$date, format="%m/%d/%Y")
+    paydays$trandate <- as.Date(paydays$date)
     paydays <- subset(paydays, select=c(trandate, payday))
     paydays <- ddply(paydays, "trandate", summarise, payday = paste(payday, collapse="+"))
+    
+    # ensure that the holidays data set is complete
+    if(max(paydays$trandate, na.rm=T) < populateTo)
+        stop(sprintf("missing paydays data up to %s", populateTo))
     
     # pay days - merge with the cash data
     paydays <- data.table(paydays, key="trandate")
@@ -98,15 +106,12 @@ addEvents <- function(cash, eventsFile, dataDir) {
 # to a data frame.
 ##################################################################
 addTrend <- function(data, by, abbrev) {
-    
     loginfo("creating trend by (%s)", by)
-    print(system.time(
-        trend <- data[, list(mean=mean(usage, na.rm=T), 
-                             min=min(usage, na.rm=T), 
-                             max=max(usage, na.rm=T), 
-                             sd=sd(usage, na.rm=T)), 
-                      by=by]
-    ))
+    trend <- data[, list(mean=mean(usage, na.rm=T), 
+                         min=min(usage, na.rm=T), 
+                         max=max(usage, na.rm=T), 
+                         sd=sd(usage, na.rm=T)), 
+                  by=by]
     
     # ensure that there are no unexpected NAs - should not need this
     trend$mean[is.na(trend$mean)] <- 0
@@ -115,13 +120,14 @@ addTrend <- function(data, by, abbrev) {
     trend$sd[is.na(trend$sd)] <- 0
     
     # alter the column names - for example day-of-week mean is labelled 'dowMean'
-    setnames(trend, c(by, paste0(abbrev,"Mean"), paste0(abbrev,"Min"),
-                      paste0(abbrev,"Max"), paste0(abbrev,"Sd")))
+    setnames(trend, c(by, 
+                      paste0(abbrev,"Mean"), 
+                      paste0(abbrev,"Min"),
+                      paste0(abbrev,"Max"), 
+                      paste0(abbrev,"Sd")))
     
     loginfo("joining trend with the original data...")
-    print(system.time(
-        data <- merge(x=data, y=trend, by=by, all.x=T)
-    ))
+    data <- merge(x=data, y=trend, by=by, all.x=T)
     
     # clean-up the excess data sets to avoid an out-of-memory
     rm(trend)
@@ -137,7 +143,8 @@ addTrend <- function(data, by, abbrev) {
 # paydays, and events.  A single 'cash' data frame is returned to be used 
 # for training and prediction.
 ##################################################################
-fetch <- function(dataDir="../../resources",
+fetch <- function(populateTo=today()+120,
+                  dataDir="../../resources",
                   usageFile="usage-micro.rds",
                   holidaysFile="holidays.csv",
                   eventsFile="events.csv",
@@ -147,8 +154,8 @@ fetch <- function(dataDir="../../resources",
         
         # build the feature set including usage, holidays, paydays and events
         cash <- fetchUsage(usageFile, dataDir)
-        cash <- addHolidays(cash, holidaysFile, dataDir)
-        cash <- addPaydays(cash, paydaysFile, dataDir)
+        cash <- addHolidays(cash, holidaysFile, dataDir, populateTo)
+        cash <- addPaydays(cash, paydaysFile, dataDir, populateTo)
         cash <- addEvents(cash, eventsFile, dataDir)        
         
         # add trend summaries specific to the ATM
