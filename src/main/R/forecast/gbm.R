@@ -19,8 +19,8 @@ trainAndScore <- function(by, data, splitAt="2013-07-01") {
                            trandateN + dayOfMonth + dayOfYear + dayOfSemiYear + dayOfQuarter + 
                            dayOfWeek + weekOfMonth + weekOfYear + quarter + monthOfYear + 
                            
-                           # paydays, holidays, events
-                           paydayN + holidayN + eventDistance +
+                           # paydays, holidays, TODO(Nick): ignoring events until data updated
+                           paydayN + holidayN + #eventDistance +
                            
                            # usage trends specific to the ATM
                            woyMean + woyMin + woyMax + woySd + 

@@ -1,16 +1,12 @@
 
 ##################################################################
-# Fetches the ATM usage data and builds a set of features related
-# to the date.
+# Builds a set of features related to the date.
 ##################################################################
-fetchUsage <- function(usageFile, dataDir) {
+addDateFeatures <- function(cash) {
     
     # add date related features
-    cash <- readRDS(sprintf("%s/%s", dataDir, usageFile))
-    cash <- data.table(cash, key=c("atm","trandate"))
     cash <- within(cash, {
         atm <- ordered(atm)
-        usage <- as.integer(usage)
         trandate <- as.Date(trandate, format="%m/%d/%Y")
         trandateN <- as.integer(trandate)
         quarter <- quarter(trandate)
@@ -31,7 +27,7 @@ fetchUsage <- function(usageFile, dataDir) {
 # Fetches the holidays data and merges this with the original
 # data set.
 ##################################################################
-addHolidays <- function(cash, holidaysFile, dataDir, populateTo) {
+addHolidays <- function(cash, holidaysFile, dataDir, forecastTo) {
     
     # holidays - clean
     holidays <- read.csv(sprintf("%s/%s", dataDir, holidaysFile))
@@ -41,8 +37,8 @@ addHolidays <- function(cash, holidaysFile, dataDir, populateTo) {
     holidays <- data.table(holidays, key="trandate")
     
     # ensure that the holidays data set is complete
-    if(max(holidays$trandate, na.rm=T) < populateTo)
-        stop(sprintf("missing holidays data up to %s", populateTo))
+    if(max(holidays$trandate, na.rm=T) < forecastTo)
+        stop(sprintf("missing holidays data up to %s", forecastTo))
     
     # holidays - merge with the cash data
     cash <- merge(x=cash, y=holidays, by="trandate", all.x=T)
@@ -56,7 +52,7 @@ addHolidays <- function(cash, holidaysFile, dataDir, populateTo) {
     return(cash)
 }
 
-addPaydays <- function(cash, paydaysFile, dataDir, populateTo) {
+addPaydays <- function(cash, paydaysFile, dataDir, forecastTo) {
     
     # pay days - need to collapse multiple pay/pre/post days into one row for each atm/date
     paydays <- read.csv(sprintf("%s/%s", dataDir, paydaysFile))
@@ -65,8 +61,8 @@ addPaydays <- function(cash, paydaysFile, dataDir, populateTo) {
     paydays <- ddply(paydays, "trandate", summarise, payday = paste(payday, collapse="+"))
     
     # ensure that the holidays data set is complete
-    if(max(paydays$trandate, na.rm=T) < populateTo)
-        stop(sprintf("missing paydays data up to %s", populateTo))
+    if(max(paydays$trandate, na.rm=T) < forecastTo)
+        stop(sprintf("missing paydays data up to %s", forecastTo))
     
     # pay days - merge with the cash data
     paydays <- data.table(paydays, key="trandate")
@@ -143,7 +139,7 @@ addTrend <- function(data, by, abbrev) {
 # paydays, and events.  A single 'cash' data frame is returned to be used 
 # for training and prediction.
 ##################################################################
-fetch <- function(populateTo=today()+120,
+fetch <- function(forecastTo=today()+30,
                   dataDir="../../resources",
                   usageFile="usage-micro.rds",
                   holidaysFile="holidays.csv",
@@ -151,12 +147,24 @@ fetch <- function(populateTo=today()+120,
                   paydaysFile="paydays.csv") {
     
     cash <- cache("cash", {
+
+        # grab the historical usage data
+        history <- readRDS(sprintf("%s/%s", dataDir, usageFile))
+        lastDay <- max(history$trandate)
         
-        # build the feature set including usage, holidays, paydays and events
-        cash <- fetchUsage(usageFile, dataDir)
-        cash <- addHolidays(cash, holidaysFile, dataDir, populateTo)
-        cash <- addPaydays(cash, paydaysFile, dataDir, populateTo)
-        cash <- addEvents(cash, eventsFile, dataDir)        
+        # which 'future' atm-dates need to be forecasted?
+        future <- expand.grid(atm=unique(history$atm), 
+                              trandate=seq(from=lastDay+1, to=forecastTo, by="days"), 
+                              usage=NA_integer_)
+
+        # combine the historical data with what needs forecasted
+        cash <- data.table(rbind(history, future), key=c("atm","trandate"))
+        
+        # build out the feature set with dates, holidays, paydays and events
+        cash <- addDateFeatures(cash)
+        cash <- addHolidays(cash, holidaysFile, dataDir, forecastTo)
+        cash <- addPaydays(cash, paydaysFile, dataDir, forecastTo)
+        #cash <- addEvents(cash, eventsFile, dataDir)        
         
         # add trend summaries specific to the ATM
         cash <- addTrend(cash, by=c("atm","weekOfYear"), "woy")
@@ -174,7 +182,11 @@ fetch <- function(populateTo=today()+120,
         cash <- addTrend(cash, by="weekOfMonth", "womAll")
         cash <- addTrend(cash, by="quarter", "quaAll")  
         cash <- addTrend(cash, by="holidayN", "holAll")
-        cash <- addTrend(cash, by="paydayN", "payAll")        
+        cash <- addTrend(cash, by="paydayN", "payAll") 
+        
+        # tidy up a bit
+        cash <- subset(cash, select=c(8:10,1:7,11:ncol(cash)))
+        setkeyv(cash, c("atm", "trandate"))
     })
     
     return(cash)

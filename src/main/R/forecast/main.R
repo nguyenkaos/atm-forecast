@@ -67,12 +67,12 @@ if(opts$parallel) {
 basicConfig(level=loglevels[opts$logLevel])
 
 # fetch and clean the input data
-cash <- fetch(usageFile    = opts$usageFile, 
+cash <- fetch(forecastTo   = today() + opts$forecastOut,
+              usageFile    = opts$usageFile, 
               holidaysFile = opts$holidaysFile, 
               eventsFile   = opts$eventsFile, 
               paydaysFile  = opts$paydaysFile, 
-              dataDir      = opts$dataDir,
-              populateTo   = today() + opts$forecastOut)
+              dataDir      = opts$dataDir)
 
 # a subset expression can be provided to limit the number of ATMs that will be forecasted
 subsetExpr <- parse(text=opts$subset)
