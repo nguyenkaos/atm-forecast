@@ -11,10 +11,7 @@ all_options <- list(
                 default="2013-08-15"),
     make_option(c("-l", "--logLevel"),
                 help="Level of logging [default: %default]",
-                default="INFO"),
-    make_option(c("-m", "--model"),
-                help="The model to use for forecasting; gbm, forest [default: %default]",
-                default="gbm"),  
+                default="INFO"),  
     make_option(c("--subset"),
                 help="An expression to identify a subset of ATMs to forecast [default: %default (all)]",
                 default="T==T"),
@@ -56,9 +53,6 @@ source("train.R")
 source("score.R")
 source("utils.R")
 
-# if '--model' argument is 'gbm', then 'gbm.R' will be sourced
-source(paste0(opts$model, ".R"))
-
 # run multiple threads/cores
 if(opts$parallel) {
     source("../common/parallel.R")   
@@ -78,17 +72,48 @@ cash <- fetch(forecastTo   = today() + opts$forecastOut,
 subsetExpr <- parse(text=opts$subset)
 
 # train and score the model by atm
+# scoreByAtm <- cache("scoreByAtm", {
+#     cash[ eval(subsetExpr), 
+#           c("usageHat","mape","score") 
+#           := trainAndScore(.BY, .SD, 
+#                            splitAt = opts$splitAt, 
+#                            method  = "gbm",
+#                            default = expand.grid(.interaction.depth=2, .n.trees=50, .shrinkage=0.1), 
+#                            verbose=F, 
+#                            distribution="poisson"), 
+#           by=atm]
+# })
+
+# scoreByAtm <- cache("scoreByAtm", {
+#     cash[ eval(subsetExpr), 
+#           c("usageHat","mape","score") 
+#           := trainAndScore(.BY, .SD, 
+#                            splitAt = opts$splitAt, 
+#                            method  = "rf",
+#                            default = expand.grid(.mtry=max(floor(ncol(data)/3), 1))), 
+#           by=atm]
+# })
+# 
 scoreByAtm <- cache("scoreByAtm", {
-    cash[eval(subsetExpr), 
-         c("usageHat","mape","score"):=trainAndScore(.BY, .SD, splitAt=opts$splitAt), 
-         by=atm]
+    cash[ eval(subsetExpr), 
+          c("usageHat","mape","score") 
+          := trainAndScore(.BY, .SD, 
+                           splitAt    = opts$splitAt, 
+                           method     = "parRF",
+                           default    = expand.grid(.mtry=max(floor(ncol(data)/3), 1)),
+                           preProcess = c("center","scale")
+                           ), 
+          by=atm]
 })
 
 # show a small portion of the resulting scores by atm
 scoreByAtm <- subset(scoreByAtm, select=c(atm,trandate,usage,usageHat,mape,score))
 head(scoreByAtm)
-loginfo("forecasting complete")
+loginfo("...forecasting complete")
 
+# export the forecast to a csv file
+forecast <- subset(scoreByAtm, trandate >= today(), select=c(atm,trandate,usageHat))
+write.csv(forecast, sprintf("forecast-%s.csv", today()))
 
 
 
