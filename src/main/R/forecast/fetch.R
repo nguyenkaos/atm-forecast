@@ -8,16 +8,16 @@ addDateFeatures <- function(cash) {
     cash <- within(cash, {
         atm <- ordered(atm)
         trandate <- as.Date(trandate, format="%m/%d/%Y")
-        trandateN <- as.integer(trandate)
+        trandate.n <- as.integer(trandate)
         quarter <- quarter(trandate)
-        monthOfYear <- month(trandate)
-        dayOfYear <- yday(trandate)
-        dayOfSemiYear <- dayOfYear %% 182
-        dayOfQuarter <- dayOfYear %% 91
-        dayOfMonth <- mday(trandate)
-        dayOfWeek <- wday(trandate)
-        weekOfYear <- week(trandate)
-        weekOfMonth <- week(trandate) - week(floor_date(trandate,"month"))
+        month.of.year <- month(trandate)
+        day.of.year <- yday(trandate)
+        day.of.semi.year <- day.of.year %% 182
+        day.of.quarter <- day.of.year %% 91
+        day.of.month <- mday(trandate)
+        day.of.week <- wday(trandate)
+        week.of.year <- week(trandate)
+        week.of.month <- week(trandate) - week(floor_date(trandate,"month"))
     })
     
     return(cash)
@@ -46,7 +46,7 @@ addHolidays <- function(cash, holidaysFile, dataDir, forecastTo) {
     cash$holiday[is.na(cash$holiday)] <- "none"
     cash <- within(cash, {
         holiday <- as.factor(holiday)
-        holidayN <- as.integer(holiday)
+        holiday.n <- as.integer(holiday)
     })
     
     return(cash)
@@ -70,7 +70,7 @@ addPaydays <- function(cash, paydaysFile, dataDir, forecastTo) {
     cash$payday[is.na(cash$payday)] <- "none"
     cash <- within(cash, {
         payday <- as.factor(payday)
-        paydayN <- as.integer(payday)      
+        payday.n <- as.integer(payday)      
     })
     
     return(cash)
@@ -103,31 +103,28 @@ addEvents <- function(cash, eventsFile, dataDir) {
 ##################################################################
 addTrend <- function(data, by, abbrev) {
     loginfo("creating trend by (%s)", by)
-    trend <- data[, list(mean=mean(usage, na.rm=T), 
-                         min=min(usage, na.rm=T), 
-                         max=max(usage, na.rm=T), 
-                         sd=sd(usage, na.rm=T)), 
+    trend <- data[, 
+                  list(mean=mean(usage, na.rm=T), 
+                       min=min(usage, na.rm=T), 
+                       max=max(usage, na.rm=T), 
+                       sd=sd(usage, na.rm=T)), 
                   by=by]
     
-    # ensure that there are no unexpected NAs - should not need this
-    trend$mean[is.na(trend$mean)] <- 0
-    trend$min[is.na(trend$min)] <- 0
-    trend$max[is.na(trend$max)] <- 0
-    trend$sd[is.na(trend$sd)] <- 0
+    # if min, max, etc find only NA values they will return Inf/-Inf
+    trend$mean[!is.finite(trend$mean)] <- 0
+    trend$min[!is.finite(trend$min)] <- 0
+    trend$max[!is.finite(trend$max)] <- 0
+    trend$sd[!is.finite(trend$sd)] <- 0
     
     # alter the column names - for example day-of-week mean is labelled 'dowMean'
     setnames(trend, c(by, 
-                      paste0(abbrev,"Mean"), 
-                      paste0(abbrev,"Min"),
-                      paste0(abbrev,"Max"), 
-                      paste0(abbrev,"Sd")))
+                      paste(abbrev, "mean", sep="."), 
+                      paste(abbrev, "min", sep="."),
+                      paste(abbrev, "max", sep="."), 
+                      paste(abbrev, "sd", sep=".")))
     
     loginfo("joining trend with the original data...")
     data <- merge(x=data, y=trend, by=by, all.x=T)
-    
-    # clean-up the excess data sets to avoid an out-of-memory
-    rm(trend)
-    gc()
     
     return(data)
 }
@@ -147,7 +144,7 @@ fetch <- function(forecastTo=today()+30,
                   paydaysFile="paydays.csv") {
     
     cash <- cache("cash", {
-
+        
         # grab the historical usage data
         history <- readRDS(sprintf("%s/%s", dataDir, usageFile))
         lastDay <- max(history$trandate)
@@ -156,7 +153,7 @@ fetch <- function(forecastTo=today()+30,
         future <- expand.grid(atm=unique(history$atm), 
                               trandate=seq(from=lastDay+1, to=forecastTo, by="days"), 
                               usage=NA_integer_)
-
+        
         # combine the historical data with what needs forecasted
         cash <- data.table(rbind(history, future), key=c("atm","trandate"))
         
@@ -167,27 +164,40 @@ fetch <- function(forecastTo=today()+30,
         #cash <- addEvents(cash, eventsFile, dataDir)        
         
         # add trend summaries specific to the ATM
-        cash <- addTrend(cash, by=c("atm","weekOfYear"), "woy")
-        cash <- addTrend(cash, by=c("atm","monthOfYear"), "moy")
-        cash <- addTrend(cash, by=c("atm","dayOfWeek"), "dow")
-        cash <- addTrend(cash, by=c("atm","weekOfMonth"), "wom")
+        cash <- addTrend(cash, by=c("atm","week.of.year"), "woy")
+        cash <- addTrend(cash, by=c("atm","month.of.year"), "moy")
+        cash <- addTrend(cash, by=c("atm","day.of.week"), "dow")
+        cash <- addTrend(cash, by=c("atm","week.of.month"), "wom")
         cash <- addTrend(cash, by=c("atm","quarter"), "qua")
-        cash <- addTrend(cash, by=c("atm","holidayN"), "hol")
-        cash <- addTrend(cash, by=c("atm","paydayN"), "pay")         
+        cash <- addTrend(cash, by=c("atm","holiday.n"), "hol")
+        cash <- addTrend(cash, by=c("atm","payday.n"), "pay")         
         
         # add trend summaries across all of the ATMs
-        cash <- addTrend(cash, by="weekOfYear", "woyAll")
-        cash <- addTrend(cash, by="monthOfYear", "moyAll")
-        cash <- addTrend(cash, by="dayOfWeek", "dowAll")
-        cash <- addTrend(cash, by="weekOfMonth", "womAll")
-        cash <- addTrend(cash, by="quarter", "quaAll")  
-        cash <- addTrend(cash, by="holidayN", "holAll")
-        cash <- addTrend(cash, by="paydayN", "payAll") 
+        cash <- addTrend(cash, by="week.of.year", "woy.all")
+        cash <- addTrend(cash, by="month.of.year", "moy.all")
+        cash <- addTrend(cash, by="day.of.week", "dow.all")
+        cash <- addTrend(cash, by="week.of.month", "wom.all")
+        cash <- addTrend(cash, by="quarter", "qua.all")  
+        cash <- addTrend(cash, by="holiday.n", "hol.all")
+        cash <- addTrend(cash, by="payday.n", "pay.all") 
         
         # tidy up a bit
         cash <- subset(cash, select=c(8:10,1:7,11:ncol(cash)))
         setkeyv(cash, c("atm", "trandate"))
     })
     
+    # sanity check - only 'usage' can be NA, all others must be finite
+    cashNoUsage <- subset(cash, select=-c(usage))
+    finite <- is.finite(cashNoUsage)
+    if(!all(finite))
+        stop(sprintf("All values must be finite!  Check %s", 
+                     paste(names(finite)[!finite], collapse=", ")))
+    
     return(cash)
 }
+
+is.finite.data.frame <- function(obj){
+    sapply(obj,FUN = function(x) all(is.finite(x)))
+}
+
+
