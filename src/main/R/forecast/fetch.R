@@ -80,11 +80,12 @@ addEvents <- function(cash, eventsFile, dataDir) {
     
     # events - clean the data gathered from stub hub
     events <- read.csv(sprintf("%s/%s", dataDir, eventsFile))
-    events <- rename(events, c("eventdate"="trandate", 
-                               "totalTickets"="eventTickets", 
-                               "distance"="eventDistance"))
+    events <- rename(events, c("eventdate"    = "trandate", 
+                               "totalTickets" = "eventTickets", 
+                               "distance"     = "eventDistance"))
     events$trandate <- as.Date(events$trandate, format="%m/%d/%Y")
-    events <- ddply(events, c("atm","trandate"), 
+    events <- ddply(events, 
+                    c("atm","trandate"), 
                     summarise, 
                     eventTickets = sum(eventTickets), 
                     eventDistance = mean(eventDistance))
@@ -104,10 +105,10 @@ addEvents <- function(cash, eventsFile, dataDir) {
 addTrend <- function(data, by, abbrev) {
     loginfo("creating trend by (%s)", by)
     trend <- data[, 
-                  list(mean=mean(usage, na.rm=T), 
-                       min=min(usage, na.rm=T), 
-                       max=max(usage, na.rm=T), 
-                       sd=sd(usage, na.rm=T)), 
+                  list(mean = mean(usage, na.rm=T), 
+                       min  = min(usage, na.rm=T), 
+                       max  = max(usage, na.rm=T), 
+                       sd   = sd(usage, na.rm=T)), 
                   by=by]
     
     # if min, max, etc find only NA values they will return Inf/-Inf
@@ -126,6 +127,10 @@ addTrend <- function(data, by, abbrev) {
     loginfo("joining trend with the original data...")
     data <- merge(x=data, y=trend, by=by, all.x=T)
     
+    # help out the memory manager
+    rm(trend)
+    gc()
+    
     return(data)
 }
 
@@ -136,12 +141,12 @@ addTrend <- function(data, by, abbrev) {
 # paydays, and events.  A single 'cash' data frame is returned to be used 
 # for training and prediction.
 ##################################################################
-fetch <- function(forecastTo=today()+30,
-                  dataDir="../../resources",
-                  usageFile="usage-micro.rds",
-                  holidaysFile="holidays.csv",
-                  eventsFile="events.csv",
-                  paydaysFile="paydays.csv") {
+fetch <- function(forecastTo   = today()+30,
+                  dataDir      = "../../resources",
+                  usageFile    = "usage-micro.rds",
+                  holidaysFile = "holidays.csv",
+                  eventsFile   = "events.csv",
+                  paydaysFile  = "paydays.csv") {
     
     cash <- cache("cash", {
         
@@ -196,8 +201,12 @@ fetch <- function(forecastTo=today()+30,
     return(cash)
 }
 
-is.finite.data.frame <- function(obj){
-    sapply(obj,FUN = function(x) all(is.finite(x)))
+##################################################################
+# Checks all columns/features in a data frame to ensure
+# they are 'finite' meaning not NA, NULL, NaN, etc.
+##################################################################
+is.finite.data.frame <- function(df){
+    sapply(df, function(col) all(is.finite(col)))
 }
 
 
