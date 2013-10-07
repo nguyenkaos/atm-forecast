@@ -50,15 +50,22 @@ scoreByAtm <- cache("gbm-score-by-atm", {
           by=atm]
 })
 
+# clean up the forecast itself
+forecast <- subset(scoreByAtm, trandate >= today(), select = c(atm,trandate,usageHat))
+forecast <- within(forecast, {
+    usageHat <- sapply(usageHat, round)
+})
+
 # export the forecast to a csv file
 filename <- sprintf("forecast-%s.csv", today())
-forecast <- subset(scoreByAtm, trandate >= today(), select = c(atm,trandate,usageHat))
 write.csv(forecast, filename)
 loginfo("forecasting complete and written to %s", filename)
 
 # show the scores for july and august
 julyAndAugust <- subset(scoreByAtm, trandate>'2013-06-30' & trandate<'2013-09-01')
-julyAndAugust[, list(score=sum(score, na.rm=T), count=length(unique(atm))), by=month(trandate)]
+julyAndAugust[, list(score=sum(score, na.rm=T), 
+                     count=length(unique(atm))), 
+              by=month(trandate)]
 
 
 
