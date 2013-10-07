@@ -15,7 +15,9 @@ trainAndScore <- function(by, data, method, splitAt, default, ...) {
     
     # build and cache the fitted model
     cacheAs <- sprintf("fit-%s", atm)
-    fit <- cache(cacheAs, trainer(data, method, splitAt, ...))
+    fit <- cache(cacheAs, {
+        trainer(data, method, splitAt, ...)
+    })
 
     # score the model
     result <- NULL
@@ -37,7 +39,6 @@ trainer <- function(data, method, splitAt, default, f=usage~., ...) {
         ctrl <- trainControl(method="boot632", 
                              number=5, 
                              repeats=3, 
-                             #returnData=T, 
                              allowParallel=T)
         tryCatch(
             fit <- train(f, data=train, method=method, trControl=ctrl, ...), 
