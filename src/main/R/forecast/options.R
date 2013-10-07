@@ -3,7 +3,7 @@
 # defines the options/arguments
 library("optparse")
 
-options <- function() {
+getOptions <- function() {
     
     # define the valid command line options
     all_options <- list(
