@@ -1,64 +1,29 @@
 #!/usr/bin/env Rscript
 
-# defines the options/arguments
-library("optparse")
-all_options <- list(
-    make_option(c("--forecastOut"),
-                help="How far out to forecast in days.",
-                default=120),
-    make_option(c("--splitAt"),
-                help="Date at which to split data into training vs test [default: %default]",
-                default="2013-08-15"),
-    make_option(c("-l", "--logLevel"),
-                help="Level of logging [default: %default]",
-                default="INFO"),  
-    make_option(c("--subset"),
-                help="An expression to identify a subset of ATMs to forecast [default: %default (all)]",
-                default="T==T"),
-    make_option(c("--parallel"), 
-                action="store_true",
-                help="Run with a parallel backend enabled",
-                default=F),
-    make_option(c("-d", "--dataDir"),
-                help="Directory containing the data files [default: %default]",
-                default="../../resources"),
-    make_option(c("--usageFile"), 
-                help="RDS file containing the ATM usage data [default: %default]",
-                default="usage-micro.rds"),
-    make_option(c("--holidaysFile"), 
-                help="CSV file containing holidays data [default: %default]",
-                default="holidays.csv"),
-    make_option(c("--eventsFile"), 
-                help="CSV file containing events data [default: %default]",
-                default="events.csv"),
-    make_option(c("--paydaysFile"), 
-                help="CSV file containing pay days data [default: %default]",
-                default="paydays.csv")
-)
-opts <- parse_args(OptionParser(option_list=all_options))
-
 # required libraries
 library("plyr")
 library("caret")
 library("data.table")
 library("lubridate")
-library("gdata")
 library("logging")
 library("foreach")
 
 # other project sources
+source("options.R")
 source("../common/cache.R")
 source("fetch.R")
 source("train.R")
 source("score.R")
 source("utils.R")
 
+# gather the command line options
+opts <- options()
+basicConfig(level=loglevels[opts$logLevel])
+
 # run multiple threads/cores
 if(opts$parallel) {
     source("../common/parallel.R")   
 }
-
-basicConfig(level=loglevels[opts$logLevel])
 
 # fetch and clean the input data
 cash <- fetch(forecastTo   = today() + opts$forecastOut,
@@ -69,52 +34,35 @@ cash <- fetch(forecastTo   = today() + opts$forecastOut,
               dataDir      = opts$dataDir)
 
 # a subset expression can be provided to limit the number of ATMs that will be forecasted
-subsetExpr <- parse(text=opts$subset)
+subsetExpr <- parse(text = opts$subset)
 
 # train and score the model by atm
-# scoreByAtm <- cache("scoreByAtm", {
-#     cash[ eval(subsetExpr), 
-#           c("usageHat","mape","score") 
-#           := trainAndScore(.BY, .SD, 
-#                            splitAt = opts$splitAt, 
-#                            method  = "gbm",
-#                            default = expand.grid(.interaction.depth=2, .n.trees=50, .shrinkage=0.1), 
-#                            verbose=F, 
-#                            distribution="poisson"), 
-#           by=atm]
-# })
-
-# scoreByAtm <- cache("scoreByAtm", {
-#     cash[ eval(subsetExpr), 
-#           c("usageHat","mape","score") 
-#           := trainAndScore(.BY, .SD, 
-#                            splitAt = opts$splitAt, 
-#                            method  = "rf",
-#                            default = expand.grid(.mtry=max(floor(ncol(data)/3), 1))), 
-#           by=atm]
-# })
-# 
-scoreByAtm <- cache("scoreByAtm", {
+scoreByAtm <- cache("gbm-score-by-atm", {
     cash[ eval(subsetExpr), 
           c("usageHat","mape","score") 
           := trainAndScore(.BY, .SD, 
-                           splitAt    = opts$splitAt, 
-                           method     = "parRF",
-                           default    = expand.grid(.mtry=max(floor(ncol(data)/3), 1)),
-                           preProcess = c("center","scale")
-                           ), 
+                           method = "gbm",
+                           splitAt = as.Date(opts$splitAt), 
+                           default = expand.grid(.interaction.depth=2, .n.trees=50, .shrinkage=0.1), 
+                           verbose = F, 
+                           distribution = "poisson"), 
           by=atm]
 })
 
+# export the forecast to a csv file
+forecast <- subset(scoreByAtm, trandate >= today(), select = c(atm,trandate,usageHat))
+write.csv(forecast, sprintf("forecast-%s.csv", today()))
+
 # show a small portion of the resulting scores by atm
-scoreByAtm <- subset(scoreByAtm, select=c(atm,trandate,usage,usageHat,mape,score))
+scoreByAtm <- subset(scoreByAtm, select = c(atm,trandate,usage,usageHat,mape,score))
 head(scoreByAtm)
 loginfo("...forecasting complete")
 
-# export the forecast to a csv file
-forecast <- subset(scoreByAtm, trandate >= today(), select=c(atm,trandate,usageHat))
-write.csv(forecast, sprintf("forecast-%s.csv", today()))
-
+# TEMP DELETE ME
+scoreByAtm <- subset(scoreByAtm, 
+                trandate>'2013-06-30' & trandate<'2013-09-01', 
+                select=c(atm,trandate,usage,usageHat,mape,score))
+scoreByAtm[, sum(score), by=month(trandate)]
 
 
 
