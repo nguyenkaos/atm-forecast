@@ -8,12 +8,12 @@ score <- function(data, fit) {
     
     if(nrow(data) > 0 && !is.null(fit)) {
         # predict the training set 
-        data$usageHat <- predict(fit, newdata=data)
-        data$mape <- mapply(mape, data$usage, data$usageHat)
+        data$usage.hat <- predict(fit, newdata=data)
+        data$mape <- mapply(mape, data$usage, data$usage.hat)
         data$score <- mapply(points, data$mape)
     } else {
         # not enough information to score
-        data$usageHat <- NA
+        data$usage.hat <- NA
         data$mape <- NA
         data$score <- NA
     }
@@ -59,8 +59,8 @@ points <- function(mape) {
 ############################################################################
 logScore <- function(atm, scored) {
     score <- sum(scored$score)
-    possibleScore <- nrow(scored) * 2
-    perc <- (score/possibleScore) * 100
+    possible.score <- nrow(scored) * 2
+    perc <- (score/possible.score) * 100
     loginfo("%s --> %.1f points or %.1f%% of points available", atm, score, perc)
 }
 

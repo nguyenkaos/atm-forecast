@@ -9,21 +9,21 @@ onError <- function(e) {
 # set with all features, along with the prediction and scoring
 # metrics.  
 ##################################################################
-trainAndScore <- function(by, data, method, splitAt, default, ...) {
+trainAndScore <- function(by, data, method, split.at, default, ...) {
     atm <- by$atm
-    loginfo("Training '%s' with train/test split at '%s'", atm, splitAt)
+    loginfo("Training '%s' with train/test split at '%s'", atm, split.at)
     
     # build and cache the fitted model
     cacheAs <- sprintf("fit-%s", atm)
     fit <- cache(cacheAs, {
-        trainer(data, method, splitAt, ...)
+        trainer(data, method, split.at, ...)
     })
 
     # score the model
     result <- NULL
     if(!is.null(fit)) {
         scored <- score(data, fit)
-        result <- list(scored$usageHat, scored$mape, scored$score)  
+        result <- list(scored$usage.hat, scored$mape, scored$score)  
     } 
     return(result)
 }
@@ -31,10 +31,10 @@ trainAndScore <- function(by, data, method, splitAt, default, ...) {
 ##################################################################
 # Trains a subset of data.
 ##################################################################
-trainer <- function(data, method, splitAt, default, f=usage~., ...) {
+trainer <- function(data, method, split.at, default, f=usage~., ...) {
     fit <- NULL
     
-    train <- subset(data, trandate < splitAt)
+    train <- subset(data, trandate < split.at)
     if(nrow(train) > 0) {
         ctrl <- trainControl(method="boot632", 
                              number=5, 
