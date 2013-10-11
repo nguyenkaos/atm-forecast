@@ -63,7 +63,7 @@ addPaydays <- function(cash, paydays.file, data.dir, forecast.to) {
     raw <- read.csv(sprintf("%s/%s", data.dir, paydays.file), 
                     col.names=c("base","trandate","payday","type"),
                     colClasses=c("NULL", "Date", "character", "NULL"),
-                    stringsAsFactors=FALSE)
+                    stringsAsFactors=T)
     paydays <- data.table(raw, key="trandate")
     paydays.max <- max(paydays$trandate, na.rm=T)
     
@@ -72,20 +72,17 @@ addPaydays <- function(cash, paydays.file, data.dir, forecast.to) {
         stop(sprintf("paydays data required up to %s, but only found up to %s", forecast.to, paydays.max))
     
     # collapse multiple pay/pre/post days into a single row for each (atm,date)
-    paydays <- paydays[, list(payday = paste(unique(payday), collapse="+")), by="trandate"]
+    paydays <- paydays[, list(payday = paste(unique(payday), collapse="+")), 
+                       by="trandate"]
     
     # add the paydays data to the rest of the features
     setkeyv(cash, c("trandate", "atm"))
-    cash[paydays, payday := default(payday, "none"), ]
-    
-    # TODO - I shouldnt have to do this - default(..) should take care of this
-    cash$payday[is.na(cash$payday)] <- "none"
-    
-    # TODO - is there a cleaner way to do this??
-    cash <- within(cash, {
-        payday <- as.factor(payday)
-        payday.n <- as.numeric(payday)
-    })
+    cash[paydays, payday := default(payday, "none")]
+    cash[is.na(payday), payday:="none"]
+    cash[,`:=`(
+        payday = as.factor(payday),
+        payday.n = as.numeric(as.factor(payday))
+    )]
 }
 
 addEvents <- function(cash, events.file, data.dir) {
@@ -254,7 +251,7 @@ fetch <- function(forecast.to   = today()+30,
         cash <- fetchCash(sprintf("%s/%s", data.dir, usage.file), forecast.to)
         
         addDateFeatures(cash)
-        cash <- addPaydays(cash, paydays.file, data.dir, forecast.to)
+        addPaydays(cash, paydays.file, data.dir, forecast.to)
         cash <- addHolidays(cash, holidays.file, data.dir, forecast.to)
         #cash <- addEvents(cash, events.file, data.dir)        
         addTrends(cash)
