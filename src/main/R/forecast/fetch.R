@@ -114,100 +114,101 @@ addEvents <- function(cash, eventsFile, dataDir) {
 # groupings.
 ##################################################################
 addTrends <- function(data) {
-    loginfo("creating trends", by)
     
-    # trend by (atm, week.of.year)
+    # TODO need to remove or prevent Inf/-Inf from showing up when all NAs are passed in
+    
+    loginfo("creating trend by (atm, week.of.year)")
     data[,`:=`( woy.mean = mean(usage, na.rm=T),
                 woy.min = min(usage, na.rm=T),
                 woy.max = max(usage, na.rm=T),
                 woy.sd = sd(usage, na.rm=T)),
          by = list(atm, week.of.year)]
     
-    # trend by (atm, month.of.year)
+    loginfo("creating trend by (atm, month.of.year)")
     data[,`:=`( moy.mean = mean(usage, na.rm=T),
                 moy.min = min(usage, na.rm=T),
                 moy.max = max(usage, na.rm=T),
                 moy.sd = sd(usage, na.rm=T)),
          by = list(atm, month.of.year)]   
     
-    # trend by (atm, day.of.week)
+    loginfo("creating trend by (atm, day.of.week)")
     data[,`:=`( dow.mean = mean(usage, na.rm=T),
                 dow.min = min(usage, na.rm=T),
                 dow.max = max(usage, na.rm=T),
                 dow.sd = sd(usage, na.rm=T)),
          by = list(atm, day.of.week)]  
     
-    # trend by (atm, week.of.month)
+    loginfo("creating trend by (atm, week.of.month)")
     data[,`:=`( wom.mean = mean(usage, na.rm=T),
                 wom.min = min(usage, na.rm=T),
                 wom.max = max(usage, na.rm=T),
                 wom.sd = sd(usage, na.rm=T)),
          by = list(atm, week.of.month)]  
     
-    # trend by (atm, quarter)
+    loginfo("creating trend by (atm, quarter)")
     data[,`:=`( qua.mean = mean(usage, na.rm=T),
                 qua.min = min(usage, na.rm=T),
                 qua.max = max(usage, na.rm=T),
                 qua.sd = sd(usage, na.rm=T)),
          by = list(atm, quarter)] 
     
-    # trend by (atm, holiday.n)
+    loginfo("creating trend by (atm, holiday.n)")
     data[,`:=`( hol.mean = mean(usage, na.rm=T),
                 hol.min = min(usage, na.rm=T),
                 hol.max = max(usage, na.rm=T),
                 hol.sd = sd(usage, na.rm=T)),
          by = list(atm, holiday.n)] 
     
-    # trend by (atm, payday.n)
+    loginfo("creating trend by (atm, payday.n)")
     data[,`:=`( pay.mean = mean(usage, na.rm=T),
                 pay.min = min(usage, na.rm=T),
                 pay.max = max(usage, na.rm=T),
                 pay.sd = sd(usage, na.rm=T)),
          by = list(atm, payday.n)]         
     
-    # trend by week.of.year
+    loginfo("creating trend by week.of.year")
     data[,`:=`( woy.all.mean = mean(usage, na.rm=T),
                 woy.all.min = min(usage, na.rm=T),
                 woy.all.max = max(usage, na.rm=T),
                 woy.all.sd = sd(usage, na.rm=T)),
          by = week.of.year]   
     
-    # trend by month.of.year
+    loginfo("creating trend by month.of.year")
     data[,`:=`( moy.all.mean = mean(usage, na.rm=T),
                 moy.all.min = min(usage, na.rm=T),
                 moy.all.max = max(usage, na.rm=T),
                 moy.all.sd = sd(usage, na.rm=T)),
          by = month.of.year]   
     
-    # trend by day.of.week
+    loginfo("creating trend by day.of.week")
     data[,`:=`( dow.all.mean = mean(usage, na.rm=T),
                 dow.all.min = min(usage, na.rm=T),
                 dow.all.max = max(usage, na.rm=T),
                 dow.all.sd = sd(usage, na.rm=T)),
          by = day.of.week]   
     
-    # trend by week.of.month
+    loginfo("creating trend by week.of.month")
     data[,`:=`( wom.all.mean = mean(usage, na.rm=T),
                 wom.all.min = min(usage, na.rm=T),
                 wom.all.max = max(usage, na.rm=T),
                 wom.all.sd = sd(usage, na.rm=T)),
          by = week.of.month]   
     
-    # trend by quarter
+    loginfo("creating trend by quarter")
     data[,`:=`( qua.all.mean = mean(usage, na.rm=T),
                 qua.all.min = min(usage, na.rm=T),
                 qua.all.max = max(usage, na.rm=T),
                 qua.all.sd = sd(usage, na.rm=T)),
          by = quarter]   
     
-    # trend by holiday.n
+    loginfo("creating trend by holiday.n")
     data[,`:=`( hol.all.mean = mean(usage, na.rm=T),
                 hol.all.min = min(usage, na.rm=T),
                 hol.all.max = max(usage, na.rm=T),
                 hol.all.sd = sd(usage, na.rm=T)),
          by = holiday.n]   
     
-    # trend by payday.n
+    loginfo("creating trend by payday.n")
     data[,`:=`( pay.all.mean = mean(usage, na.rm=T),
                 pay.all.min = min(usage, na.rm=T),
                 pay.all.max = max(usage, na.rm=T),
