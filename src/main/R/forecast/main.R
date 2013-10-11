@@ -1,29 +1,28 @@
 #!/usr/bin/env Rscript
 
+# gather the command line options
+source("options.R")
+opts <- getOptions()
+basicConfig(level=loglevels[opts$logLevel])
+
 # required libraries
-library("plyr", quietly=T, warn.conflicts=F)
-library("caret", quietly=T, warn.conflicts=F)
-library("data.table", quietly=T, warn.conflicts=F)
-library("lubridate", quietly=T, warn.conflicts=F)
-library("logging", quietly=T, warn.conflicts=F)
-library("foreach", quietly=T, warn.conflicts=F)
+library("plyr", quietly=T)
+library("caret", quietly=T)
+library("data.table", quietly=T)
+library("lubridate", quietly=T)
+library("logging", quietly=T)
+library("foreach", quietly=T)
 
 # other project sources
-source("options.R")
 source("../common/cache.R")
 source("fetch.R")
 source("train.R")
 source("score.R")
 source("utils.R")
 
-# gather the command line options
-opts <- getOptions()
-basicConfig(level=loglevels[opts$logLevel])
-
 # run multiple threads/cores
-if(opts$parallel) {
+if(opts$parallel) 
     source("../common/parallel.R")   
-}
 
 # fetch and clean the input data
 cash <- fetch(forecast.to   = today() + opts$forecastOut,
