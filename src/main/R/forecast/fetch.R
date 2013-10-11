@@ -1,7 +1,7 @@
 
-################################################################################
+#
 # Builds a set of features related to the date.
-################################################################################
+#
 addDateFeatures <- function(cash) {
     loginfo("creating date features")
     
@@ -22,18 +22,18 @@ addDateFeatures <- function(cash) {
     ),]
 }
 
-################################################################################
+#
 # Fetches the holidays data and merges this with the original
 # data set.
-################################################################################
+#
 addHolidays <- function(cash, holidays.file, data.dir, forecast.to) {
     loginfo("creating holiday features")
     
     # grab the raw holidays data
-    raw <- read.csv(sprintf("%s/%s", data.dir, holidays.file),
+    holidays.raw <- read.csv(sprintf("%s/%s", data.dir, holidays.file),
                     col.names=c("trandate", "holiday", "NULL"),
                     colClasses=c("Date", "character", "NULL"))
-    holidays <- data.table(raw, key="trandate")
+    holidays <- data.table(holidays.raw, key="trandate")
     holidays.max <- max(holidays$trandate, na.rm=T)
     
     # ensure that the holidays data set is complete
@@ -42,7 +42,7 @@ addHolidays <- function(cash, holidays.file, data.dir, forecast.to) {
     
     # holidays - merge with the cash data
     setkeyv(cash, c("trandate", "atm"))
-    cash[holidays, holiday := default(holiday, "none")]
+    cash[holidays, holiday := holiday]
     cash[is.na(holiday), holiday := "none"]
     cash[,`:=`(
         holiday = as.factor(holiday),
@@ -50,19 +50,18 @@ addHolidays <- function(cash, holidays.file, data.dir, forecast.to) {
     )]
 }
 
-################################################################################
+#
 # Fetches the paydays data and merges this with the original
 # data set.
-################################################################################
+#
 addPaydays <- function(cash, paydays.file, data.dir, forecast.to) {
     loginfo("creating payday features")
     
     # read the paydays into a data.table
-    raw <- read.csv(sprintf("%s/%s", data.dir, paydays.file), 
+    paydays.raw <- read.csv(sprintf("%s/%s", data.dir, paydays.file), 
                     col.names=c("base","trandate","payday","type"),
-                    colClasses=c("NULL", "Date", "character", "NULL"),
-                    stringsAsFactors=T)
-    paydays <- data.table(raw, key="trandate")
+                    colClasses=c("NULL", "Date", "character", "NULL"))
+    paydays <- data.table(paydays.raw, key="trandate")
     paydays.max <- max(paydays$trandate, na.rm=T)
     
     # ensure that the holidays data set is complete
@@ -70,12 +69,13 @@ addPaydays <- function(cash, paydays.file, data.dir, forecast.to) {
         stop(sprintf("paydays data required up to %s, but only found up to %s", forecast.to, paydays.max))
     
     # collapse multiple pay/pre/post days into a single row for each (atm,date)
-    paydays <- paydays[, list(payday = paste(unique(payday), collapse="+")), 
+    paydays <- paydays[, 
+                       list(payday = paste(unique(payday), collapse="+")), 
                        by="trandate"]
     
     # add the paydays data to the rest of the features
     setkeyv(cash, c("trandate", "atm"))
-    cash[paydays, payday := default(payday, "none")]
+    cash[paydays, payday := payday]
     cash[is.na(payday), payday:="none"]
     cash[,`:=`(
         payday = as.factor(payday),
@@ -83,11 +83,16 @@ addPaydays <- function(cash, paydays.file, data.dir, forecast.to) {
     )]
 }
 
+#
+# Adds events to the data set.
+#
 addEvents <- function(cash, events.file, data.dir) {
     loginfo("creating event features")
     
     # events - clean the data gathered from stub hub
-    events <- read.csv(sprintf("%s/%s", data.dir, events.file))
+    events.raw <- read.csv(sprintf("%s/%s", data.dir, events.file),
+                           col.names=c("base","trandate","payday","type"),
+                           colClasses=c("NULL", "Date", "character", "NULL"))
     events <- rename(events, c("eventdate"    = "trandate", 
                                "totalTickets" = "eventTickets", 
                                "distance"     = "eventDistance"))
@@ -105,10 +110,10 @@ addEvents <- function(cash, events.file, data.dir) {
     return(cash)
 }
 
-################################################################################
+#
 # Adds a mean, min, max, sd to represent a trend by various 
 # groupings.
-################################################################################
+#
 addTrends <- function(data) {
     
     loginfo("creating trend by (atm, week.of.year)")
@@ -210,12 +215,12 @@ addTrends <- function(data) {
          by = payday.n]   
 }
 
-################################################################################
+#
 # In the original data set there is no record of days where there
 # is no usage.  This is extremely valuable information to train
 # with.  Assume that any missing days within the range of dates
 # covered are zero-usage days and need to be added to the data.
-################################################################################
+#
 fetchCash <- function(filename, forecast.to) {
     loginfo("fetching historical usage/cash data")
     
@@ -232,12 +237,12 @@ fetchCash <- function(filename, forecast.to) {
     )]
 }
 
-################################################################################
+#
 # Cleans and merges the input data and creates all of the necessary 
 # features.  Four input data frames are required; cash, holidays, 
 # paydays, and events.  A single 'cash' data frame is returned to be used 
 # for training and prediction.
-################################################################################
+#
 fetch <- function(forecast.to   = today()+30,
                   data.dir      = "../../resources",
                   usage.file    = "usage-micro.rds",

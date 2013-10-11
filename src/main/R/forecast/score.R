@@ -1,9 +1,8 @@
 library("caret")
 
-
-############################################################################
+#
 # Scores a set of predictions made by a model's 'fit'.
-############################################################################
+#
 score <- function(data, fit) {
     
     if(nrow(data) > 0 && !is.null(fit)) {
@@ -21,10 +20,10 @@ score <- function(data, fit) {
     return(data)  
 }
 
-############################################################################
+#
 # Calculates the MAPE or "Mean Adjusted Percent Error" when given a single
 # actual outcome and the predicted outcome.
-############################################################################
+#
 mape <- function(actual, predict) {
     mape <- NA
     
@@ -34,9 +33,9 @@ mape <- function(actual, predict) {
     return(mape)
 }
 
-############################################################################
+#
 # Calculates the number of competition points awarded based on the mape.
-############################################################################
+#
 points <- function(mape) {
     score <- NA
     
@@ -54,9 +53,9 @@ points <- function(mape) {
     return(score)
 }
 
-############################################################################
+#
 # Logs the total score and percentage of possible from a scored data set.
-############################################################################
+#
 logScore <- function(atm, scored) {
     score <- sum(scored$score)
     possible.score <- nrow(scored) * 2
