@@ -101,12 +101,11 @@ addEvents <- function(cash, events.file, data.dir) {
                     c("atm","trandate"), 
                     summarise, 
                     eventTickets = sum(eventTickets), 
-                    eventDistance = mean(eventDistance))
+                    eventDistance = mean.finite(eventDistance, default=3000000))
     
     # events - merge with cash - collapse multiple events into 1 row for each atm/date
     events <- data.table(events, key="trandate")
     cash <- merge(x=cash, y=events, all.x=TRUE, by=c("atm","trandate"))
-    cash$eventDistance[is.na(cash$eventDistance)] <- 3000000  
     
     return(cash)
 }
@@ -118,101 +117,101 @@ addEvents <- function(cash, events.file, data.dir) {
 addTrends <- function(data) {
     
     loginfo("creating trend by (atm, week.of.year)")
-    data[,`:=`( woy.mean = mean(usage, na.rm=T),
-                woy.min = min(usage, na.rm=T),
-                woy.max = max(usage, na.rm=T),
-                woy.sd = sd(usage, na.rm=T)),
+    data[,`:=`( woy.mean = mean.finite(usage),
+                woy.min = min.finite(usage),
+                woy.max = max.finite(usage),
+                woy.sd = sd.finite(usage)),
          by = list(atm, week.of.year)]
     
     loginfo("creating trend by (atm, month.of.year)")
-    data[,`:=`( moy.mean = mean(usage, na.rm=T),
-                moy.min = min(usage, na.rm=T),
-                moy.max = max(usage, na.rm=T),
-                moy.sd = sd(usage, na.rm=T)),
+    data[,`:=`( moy.mean = mean.finite(usage),
+                moy.min = min.finite(usage),
+                moy.max = max.finite(usage),
+                moy.sd = sd.finite(usage)),
          by = list(atm, month.of.year)]   
     
     loginfo("creating trend by (atm, day.of.week)")
-    data[,`:=`( dow.mean = mean(usage, na.rm=T),
-                dow.min = min(usage, na.rm=T),
-                dow.max = max(usage, na.rm=T),
-                dow.sd = sd(usage, na.rm=T)),
+    data[,`:=`( dow.mean = mean.finite(usage),
+                dow.min = min.finite(usage),
+                dow.max = max.finite(usage),
+                dow.sd = sd.finite(usage)),
          by = list(atm, day.of.week)]  
     
     loginfo("creating trend by (atm, week.of.month)")
-    data[,`:=`( wom.mean = mean(usage, na.rm=T),
-                wom.min = min(usage, na.rm=T),
-                wom.max = max(usage, na.rm=T),
-                wom.sd = sd(usage, na.rm=T)),
+    data[,`:=`( wom.mean = mean.finite(usage),
+                wom.min = min.finite(usage),
+                wom.max = max.finite(usage),
+                wom.sd = sd.finite(usage)),
          by = list(atm, week.of.month)]  
     
     loginfo("creating trend by (atm, quarter)")
-    data[,`:=`( qua.mean = mean(usage, na.rm=T),
-                qua.min = min(usage, na.rm=T),
-                qua.max = max(usage, na.rm=T),
-                qua.sd = sd(usage, na.rm=T)),
+    data[,`:=`( qua.mean = mean.finite(usage),
+                qua.min = min.finite(usage),
+                qua.max = max.finite(usage),
+                qua.sd = sd.finite(usage)),
          by = list(atm, quarter)] 
     
     loginfo("creating trend by (atm, holiday.n)")
-    data[,`:=`( hol.mean = mean(usage, na.rm=T),
-                hol.min = min(usage, na.rm=T),
-                hol.max = max(usage, na.rm=T),
-                hol.sd = sd(usage, na.rm=T)),
+    data[,`:=`( hol.mean = mean.finite(usage),
+                hol.min = min.finite(usage),
+                hol.max = max.finite(usage),
+                hol.sd = sd.finite(usage)),
          by = list(atm, holiday.n)] 
     
     loginfo("creating trend by (atm, payday.n)")
-    data[,`:=`( pay.mean = mean(usage, na.rm=T),
-                pay.min = min(usage, na.rm=T),
-                pay.max = max(usage, na.rm=T),
-                pay.sd = sd(usage, na.rm=T)),
+    data[,`:=`( pay.mean = mean.finite(usage),
+                pay.min = min.finite(usage),
+                pay.max = max.finite(usage),
+                pay.sd = sd.finite(usage)),
          by = list(atm, payday.n)]         
     
     loginfo("creating trend by week.of.year")
-    data[,`:=`( woy.all.mean = mean(usage, na.rm=T),
-                woy.all.min = min(usage, na.rm=T),
-                woy.all.max = max(usage, na.rm=T),
-                woy.all.sd = sd(usage, na.rm=T)),
+    data[,`:=`( woy.all.mean = mean.finite(usage),
+                woy.all.min = min.finite(usage),
+                woy.all.max = max.finite(usage),
+                woy.all.sd = sd.finite(usage)),
          by = week.of.year]   
     
     loginfo("creating trend by month.of.year")
-    data[,`:=`( moy.all.mean = mean(usage, na.rm=T),
-                moy.all.min = min(usage, na.rm=T),
-                moy.all.max = max(usage, na.rm=T),
-                moy.all.sd = sd(usage, na.rm=T)),
+    data[,`:=`( moy.all.mean = mean.finite(usage),
+                moy.all.min = min.finite(usage),
+                moy.all.max = max.finite(usage),
+                moy.all.sd = sd.finite(usage)),
          by = month.of.year]   
     
     loginfo("creating trend by day.of.week")
-    data[,`:=`( dow.all.mean = mean(usage, na.rm=T),
-                dow.all.min = min(usage, na.rm=T),
-                dow.all.max = max(usage, na.rm=T),
-                dow.all.sd = sd(usage, na.rm=T)),
+    data[,`:=`( dow.all.mean = mean.finite(usage),
+                dow.all.min = min.finite(usage),
+                dow.all.max = max.finite(usage),
+                dow.all.sd = sd.finite(usage)),
          by = day.of.week]   
     
     loginfo("creating trend by week.of.month")
-    data[,`:=`( wom.all.mean = mean(usage, na.rm=T),
-                wom.all.min = min(usage, na.rm=T),
-                wom.all.max = max(usage, na.rm=T),
-                wom.all.sd = sd(usage, na.rm=T)),
+    data[,`:=`( wom.all.mean = mean.finite(usage),
+                wom.all.min = min.finite(usage),
+                wom.all.max = max.finite(usage),
+                wom.all.sd = sd.finite(usage)),
          by = week.of.month]   
     
     loginfo("creating trend by quarter")
-    data[,`:=`( qua.all.mean = mean(usage, na.rm=T),
-                qua.all.min = min(usage, na.rm=T),
-                qua.all.max = max(usage, na.rm=T),
-                qua.all.sd = sd(usage, na.rm=T)),
+    data[,`:=`( qua.all.mean = mean.finite(usage),
+                qua.all.min = min.finite(usage),
+                qua.all.max = max.finite(usage),
+                qua.all.sd = sd.finite(usage)),
          by = quarter]   
     
     loginfo("creating trend by holiday.n")
-    data[,`:=`( hol.all.mean = mean(usage, na.rm=T),
-                hol.all.min = min(usage, na.rm=T),
-                hol.all.max = max(usage, na.rm=T),
-                hol.all.sd = sd(usage, na.rm=T)),
+    data[,`:=`( hol.all.mean = mean.finite(usage),
+                hol.all.min = min.finite(usage),
+                hol.all.max = max.finite(usage),
+                hol.all.sd = sd.finite(usage)),
          by = holiday.n]   
     
     loginfo("creating trend by payday.n")
-    data[,`:=`( pay.all.mean = mean(usage, na.rm=T),
-                pay.all.min = min(usage, na.rm=T),
-                pay.all.max = max(usage, na.rm=T),
-                pay.all.sd = sd(usage, na.rm=T)),
+    data[,`:=`( pay.all.mean = mean.finite(usage),
+                pay.all.min = min.finite(usage),
+                pay.all.max = max.finite(usage),
+                pay.all.sd = sd.finite(usage)),
          by = payday.n]   
 }
 
@@ -246,13 +245,13 @@ fetchCash <- function(filename, forecast.to) {
 ################################################################################
 fetch <- function(forecast.to   = today()+30,
                   data.dir      = "../../resources",
-                  usageFile    = "usage-micro.rds",
+                  usage.file    = "usage-micro.rds",
                   holidays.file = "holidays.csv",
                   events.file   = "events.csv",
                   paydays.file  = "paydays.csv") {
     
     cash <- cache("cash", {
-        cash <- fetchCash(sprintf("%s/%s", data.dir, usageFile), forecast.to)
+        cash <- fetchCash(sprintf("%s/%s", data.dir, usage.file), forecast.to)
         
         addDateFeatures(cash)
         cash <- addPaydays(cash, paydays.file, data.dir, forecast.to)
@@ -276,23 +275,4 @@ fetch <- function(forecast.to   = today()+30,
     return(cash)
 }
 
-################################################################################
-# Checks all columns/features in a data frame to ensure
-# they are 'finite' meaning not NA, NULL, NaN, etc.
-################################################################################
-is.finite.data.frame <- function(df){
-    sapply(df, function(col) all(is.finite(col)))
-}
 
-################################################################################
-# Returns a default value if the input is NA.
-################################################################################
-default <- function(value, default) {
-    value[is.na(value)] <- default
-    return(value)
-}
-
-################################################################################
-# the poorly named 'CJ' function is data.table's fast expand.matrix function
-################################################################################
-cross.join <- function (..., start, end) CJ(...)

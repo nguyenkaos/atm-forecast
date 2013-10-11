@@ -26,34 +26,33 @@ if(opts$parallel) {
 }
 
 # fetch and clean the input data
-cash <- fetch(forecastTo   = today() + opts$forecastOut,
-              usageFile    = opts$usageFile, 
-              holidaysFile = opts$holidaysFile, 
-              eventsFile   = opts$eventsFile, 
-              paydaysFile  = opts$paydaysFile, 
-              dataDir      = opts$dataDir)
+cash <- fetch(forecast.to   = today() + opts$forecastOut,
+              usage.file    = opts$usageFile, 
+              holidays.file = opts$holidaysFile, 
+              events.file   = opts$eventsFile, 
+              paydays.file  = opts$paydaysFile, 
+              data.dir      = opts$dataDir)
 
-# an expression can be provided to exclude certain ATMs; 'atm<median(atm)'
-subsetExpr <- parse(text = opts$subset)
+# an expression can be provided to exclude certain ATMs; ex 'atm<median(atm)'
+subset.expr <- parse(text = opts$subset)
 
 # train and score the model by atm
-scoreByAtm <- cache("gbm-score-by-atm", {
-    cash[ eval(subsetExpr), 
-          c("usageHat","mape","score") := 
-              trainAndScore(
-                  .BY, .SD, 
-                  method       = "gbm",
-                  splitAt      = as.Date(opts$splitAt), 
-                  default      = expand.grid(.interaction.depth=2, .n.trees=50, .shrinkage=0.1), 
-                  verbose      = F, 
-                  distribution = "poisson"), 
+score.by.atm <- cache("gbm-score-by-atm", {
+    cash[ eval(subset.expr), 
+          c("usage.hat","mape","score") := trainAndScore(
+              .BY, .SD, 
+              method = "gbm",
+              split.at = as.Date(opts$splitAt), 
+              default = expand.grid(.interaction.depth=2, .n.trees=50, .shrinkage=0.1), 
+              verbose = F, 
+              distribution = "poisson"), 
           by=atm]
 })
 
 # clean up the forecast itself
-forecast <- subset(scoreByAtm, trandate >= today(), select = c(atm,trandate,usageHat))
+forecast <- subset(score.by.atm, trandate >= today(), select = c(atm,trandate,usage.hat))
 forecast <- within(forecast, {
-    usageHat <- sapply(usageHat, round)
+    usage.hat <- sapply(usage.hat, round)
 })
 
 # export the forecast to a csv file
@@ -62,7 +61,7 @@ write.csv(forecast, filename)
 loginfo("forecasting complete and written to %s", filename)
 
 # show the scores for july and august
-julyAndAugust <- subset(scoreByAtm, trandate>'2013-06-30' & trandate<'2013-09-01')
+julyAndAugust <- subset(score.by.atm, trandate>'2013-06-30' & trandate<'2013-09-01')
 julyAndAugust[, list(score=sum(score, na.rm=T), 
                      count=length(unique(atm))), 
               by=month(trandate)]

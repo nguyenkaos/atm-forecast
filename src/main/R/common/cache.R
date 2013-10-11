@@ -1,25 +1,25 @@
 
 ############################################################################ 
 # Executes an expression 'expr' and caches the result under the name 
-# 'cacheName'. If the expression result has already been cached, it will be 
+# 'cache.name'. If the expression result has already been cached, it will be 
 # returned from the cache instead of re-calculated.  This can save significant 
 # time for functions that don't need to always be re-run. 
 ############################################################################
-cache <- function(cacheName, 
+cache <- function(cache.name, 
                   expr, 
-                  cacheDir   = getOption("cacheDir", default=".cache"), 
-                  clearCache = getOption("clearCache", default=F)) {
+                  cache.dir   = getOption("cache.dir", default=".cache"), 
+                  clear.cache = getOption("clear.cache", default=F)) {
     result <- NULL
-    cacheFile <- sprintf("%s/%s.rds", cacheDir, cacheName)
+    cache.file <- sprintf("%s/%s.rds", cache.dir, cache.name)
     
     # has the result already been cached?
-    if(file.exists(cacheFile) && clearCache==F) {
-        loginfo("Found '%s' cached as '%s'", cacheName, cacheFile)
-        result <- readRDS(cacheFile)
+    if(file.exists(cache.file) && clear.cache==F) {
+        loginfo("Found '%s' cached as '%s'", cache.name, cache.file)
+        result <- readRDS(cache.file)
         
     } else {
         # eval the expression 
-        loginfo("'%s' has NOT been cached", cacheName)
+        loginfo("'%s' has NOT been cached", cache.name)
         result <- eval(expr)
 
         # sanity check, just in case
@@ -27,11 +27,11 @@ cache <- function(cacheName,
             warning("attempting to cache an empty result", immediate.=T)
         
         # create the cache directory, if necessary
-        dir.create(path=cacheDir, showWarnings=FALSE)
+        dir.create(path=cache.dir, showWarnings=FALSE)
         
         # cache the result
-        loginfo("Cacheing '%s' as '%s'", cacheName, cacheFile)
-        saveRDS(result, cacheFile)
+        loginfo("Cacheing '%s' as '%s'", cache.name, cache.file)
+        saveRDS(result, cache.file)
     }
     
     return(result)
