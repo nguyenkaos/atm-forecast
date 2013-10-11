@@ -258,17 +258,17 @@ fetch <- function(forecast.to   = today()+30,
         loginfo("tidying up the cash data set")
         setkeyv(cash, c("atm", "trandate"))
         setcolorder(cash, neworder=c(2,1,3,4:ncol(cash)))
+        
+        # only 'usage' can be NA, all others must be finite
+        loginfo("running sanity checks")
+        finite <- is.finite(cash)
+        if(sum(finite) < length(colnames(cash)) - 1) {
+            bad <- paste(names(finite)[!finite], collapse=", ") 
+            stop(sprintf("all values must be finite: '%s'", bad))
+        }
+        
+        cash
     })
-    
-    # only 'usage' can be NA, all others must be finite
-    loginfo("running sanity checks")
-    finite <- is.finite(cash)
-    if(sum(finite) < length(colnames(cash)) - 1) {
-        bad <- paste(names(finite)[!finite], collapse=", ") 
-        stop(sprintf("all values must be finite: '%s'", bad))
-    }
-    
-    return(cash)
 }
 
 
