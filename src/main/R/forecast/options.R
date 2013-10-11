@@ -8,7 +8,7 @@ getOptions <- function() {
     # define the valid command line options
     all_options <- list(
         make_option(c("--forecastOut"),
-                    help="How far out to forecast in days.",
+                    help="How far out to forecast in days [default: %default]",
                     default=120),
         make_option(c("--splitAt"),
                     help="Date at which to split data into training vs test [default: %default]",
