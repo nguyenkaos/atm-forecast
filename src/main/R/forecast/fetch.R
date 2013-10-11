@@ -50,11 +50,6 @@ addHolidays <- function(cash, holidaysFile, dataDir, forecastTo) {
     return(cash)
 }
 
-default <- function(value, default) {
-    value[is.na(value)] <- default
-    return(value)
-}
-
 ##################################################################
 # Fetches the paydays data and merges this with the original
 # data set.
@@ -287,7 +282,6 @@ fetch <- function(forecastTo   = today()+30,
     return(cash)
 }
 
-
 ##################################################################
 # Checks all columns/features in a data frame to ensure
 # they are 'finite' meaning not NA, NULL, NaN, etc.
@@ -296,4 +290,10 @@ is.finite.data.frame <- function(df){
     sapply(df, function(col) all(is.finite(col)))
 }
 
-
+##################################################################
+# Returns a default value if the input is NA.
+##################################################################
+default <- function(value, default) {
+    value[is.na(value)] <- default
+    return(value)
+}
