@@ -224,6 +224,7 @@ addTrends <- function(data) {
 # covered are zero-usage days and need to be added to the data.
 ################################################################################
 fetchCash <- function(filename, forecast.to) {
+    loginfo("fetching historical usage/cash data")
     
     # fetch the history of ATM usage; days with 0 volume are missing
     hist <- data.table(readRDS(filename), key = c("atm","trandate"))   
@@ -261,16 +262,16 @@ fetch <- function(forecastTo   = today()+30,
         addTrends(cash)
         
         loginfo("tidying up the cash data set")
-        cash <- subset(cash, select=c(8:10,1:7,11:ncol(cash)))
         setkeyv(cash, c("atm", "trandate"))
+        setcolorder(cash, neworder=c(2,1,3,4:ncol(cash)))
     })
     
-    # sanity check - only 'usage' can be NA, all others must be finite
+    # only 'usage' can be NA, all others must be finite
     loginfo("running sanity checks")
-    cashNoUsage <- subset(cash, select=-c(usage))
-    finite <- is.finite(cashNoUsage)
-    if(!all(finite)) {
-        stop(sprintf("All values must be finite!  Check %s", paste(names(finite)[!finite], collapse=", ")))
+    finite <- is.finite(cash)
+    if(sum(finite) < length(colnames(cash)) - 1) {
+        bad <- paste(names(finite)[!finite], collapse=", ") 
+        stop(sprintf("all values must be finite: '%s'", bad))
     }
     
     return(cash)
@@ -292,5 +293,7 @@ default <- function(value, default) {
     return(value)
 }
 
+################################################################################
 # the poorly named 'CJ' function is data.table's fast expand.matrix function
+################################################################################
 cross.join <- function (..., start, end) CJ(...)
