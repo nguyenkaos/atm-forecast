@@ -29,27 +29,25 @@ addDateFeatures <- function(cash) {
 addHolidays <- function(cash, holidays.file, data.dir, forecast.to) {
     loginfo("creating holiday features")
     
-    # holidays - clean
-    holidays <- read.csv(sprintf("%s/%s", data.dir, holidays.file))
-    holidays$holiday <- NULL
-    holidays$date <- as.Date(holidays$date)
-    holidays <- rename(holidays, c("date"="trandate", "impact"="holiday"))
-    holidays <- data.table(holidays, key="trandate")
+    # grab the raw holidays data
+    raw <- read.csv(sprintf("%s/%s", data.dir, holidays.file),
+                    col.names=c("trandate", "holiday", "NULL"),
+                    colClasses=c("Date", "character", "NULL"))
+    holidays <- data.table(raw, key="trandate")
+    holidays.max <- max(holidays$trandate, na.rm=T)
     
     # ensure that the holidays data set is complete
-    if(max(holidays$trandate, na.rm=T) < forecast.to)
-        stop(sprintf("missing holidays data up to %s", forecast.to))
+    if(holidays.max < forecast.to)
+        stop(sprintf("holidays data required up to %s, but only found up to %s", forecast.to, holidays.max))
     
     # holidays - merge with the cash data
-    cash <- merge(x=cash, y=holidays, by="trandate", all.x=T)
-    cash$holiday <- as.character(cash$holiday)
-    cash$holiday[is.na(cash$holiday)] <- "none"
-    cash <- within(cash, {
-        holiday <- as.factor(holiday)
-        holiday.n <- as.integer(holiday)
-    })
-    
-    return(cash)
+    setkeyv(cash, c("trandate", "atm"))
+    cash[holidays, holiday := default(holiday, "none")]
+    cash[is.na(holiday), holiday := "none"]
+    cash[,`:=`(
+        holiday = as.factor(holiday),
+        holiday.n = as.numeric(as.factor(holiday))
+    )]
 }
 
 ################################################################################
@@ -248,13 +246,14 @@ fetch <- function(forecast.to   = today()+30,
                   paydays.file  = "paydays.csv") {
     
     cash <- cache("cash", {
-        cash <- fetchCash(sprintf("%s/%s", data.dir, usage.file), forecast.to)
         
+        # build out the feature set
+        cash <- fetchCash(sprintf("%s/%s", data.dir, usage.file), forecast.to)
         addDateFeatures(cash)
         addPaydays(cash, paydays.file, data.dir, forecast.to)
-        cash <- addHolidays(cash, holidays.file, data.dir, forecast.to)
-        #cash <- addEvents(cash, events.file, data.dir)        
+        addHolidays(cash, holidays.file, data.dir, forecast.to)
         addTrends(cash)
+        #cash <- addEvents(cash, events.file, data.dir)        
         
         loginfo("tidying up the cash data set")
         setkeyv(cash, c("atm", "trandate"))
