@@ -1,8 +1,9 @@
 
-##################################################################
+################################################################################
 # Builds a set of features related to the date.
-##################################################################
+################################################################################
 addDateFeatures <- function(cash) {
+    loginfo("creating date features")
     
     # add date related features
     cash[, `:=`(
@@ -21,11 +22,12 @@ addDateFeatures <- function(cash) {
     ),]
 }
 
-##################################################################
+################################################################################
 # Fetches the holidays data and merges this with the original
 # data set.
-##################################################################
+################################################################################
 addHolidays <- function(cash, holidaysFile, dataDir, forecastTo) {
+    loginfo("creating holiday features")
     
     # holidays - clean
     holidays <- read.csv(sprintf("%s/%s", dataDir, holidaysFile))
@@ -50,11 +52,12 @@ addHolidays <- function(cash, holidaysFile, dataDir, forecastTo) {
     return(cash)
 }
 
-##################################################################
+################################################################################
 # Fetches the paydays data and merges this with the original
 # data set.
-##################################################################
+################################################################################
 addPaydays <- function(cash, paydaysFile, dataDir, forecastTo) {
+    loginfo("creating payday features")
     
     # read the paydays into a data.table
     paydays <- data.table(
@@ -63,16 +66,15 @@ addPaydays <- function(cash, paydaysFile, dataDir, forecastTo) {
                  colClasses=c("NULL", "Date", "character", "NULL"),
                  stringsAsFactors=FALSE),
         key="trandate")
-
+    
     # ensure that the holidays data set is complete
     if(max(paydays$trandate, na.rm=T) < forecastTo)
         stop(sprintf("missing paydays data up to %s", forecastTo))
     
     # collapse multiple pay/pre/post days into a single row for each (atm,date)
-    paydays <- paydays[, 
-                       list(payday = paste(unique(payday), collapse="+")), 
+    paydays <- paydays[, list(payday = paste(unique(payday), collapse="+")), 
                        by="trandate"]
-
+    
     # add the paydays data to the rest of the features
     setkeyv(cash, c("trandate", "atm"))
     cash[paydays, payday := default(payday, "none"), ]
@@ -88,6 +90,7 @@ addPaydays <- function(cash, paydaysFile, dataDir, forecastTo) {
 }
 
 addEvents <- function(cash, eventsFile, dataDir) {
+    loginfo("creating event features")
     
     # events - clean the data gathered from stub hub
     events <- read.csv(sprintf("%s/%s", dataDir, eventsFile))
@@ -109,13 +112,11 @@ addEvents <- function(cash, eventsFile, dataDir) {
     return(cash)
 }
 
-##################################################################
+################################################################################
 # Adds a mean, min, max, sd to represent a trend by various 
 # groupings.
-##################################################################
+################################################################################
 addTrends <- function(data) {
-    
-    # TODO need to remove or prevent Inf/-Inf from showing up when all NAs are passed in
     
     loginfo("creating trend by (atm, week.of.year)")
     data[,`:=`( woy.mean = mean(usage, na.rm=T),
@@ -216,42 +217,33 @@ addTrends <- function(data) {
          by = payday.n]   
 }
 
-##################################################################
+################################################################################
 # In the original data set there is no record of days where there
 # is no usage.  This is extremely valuable information to train
 # with.  Assume that any missing days within the range of dates
 # covered are zero-usage days and need to be added to the data.
-##################################################################
-fetchCash <- function(filename, forecastTo) {
+################################################################################
+fetchCash <- function(filename, forecast.to) {
     
     # fetch the history of ATM usage; days with 0 volume are missing
-    history <- data.table(readRDS(filename), key=c("atm","trandate"))   
+    hist <- data.table(readRDS(filename), key = c("atm","trandate"))   
+    hist.min <- min(hist$trandate)
+    hist.max <- max(hist$trandate)
+    hist.atms <- as.character(unique(hist$atm))
     
-    # generate all atm/day records that should exist
-    all <- CJ(
-        atm = as.character(unique(history$atm)), 
-        trandate = seq(min(history$trandate), max(history$trandate), by="day"),
-        sorted = T
-    )
-    
-    # a merge results in a 'complete' history; no missing days
-    history[all, list(usage = max(usage, 0, na.rm=T)), ]
-    
-    # which 'future' dates need to be forecasted?  CJ is a fast version of expand.matrix
-    future <- CJ(atm=unique(history$atm), 
-                 trandate=seq(from=max(history$trandate)+1, to=forecastTo, by="days"), 
-                 usage=NA_integer_)
-    
-    # combine the historical data with what needs forecasted
-    cash <- rbindlist(list(history, future))
+    # 'expected' includes missing days in the past and future days that need forecast
+    expected <- cross.join(atm = hist.atms, trandate = seq(hist.min, forecast.to, by="day"))
+    hist.complete <- hist[expected, list(
+        usage = if(trandate > hist.max) NA_real_ else max(usage, 0, na.rm=T)
+    )]
 }
 
-##################################################################
+################################################################################
 # Cleans and merges the input data and creates all of the necessary 
 # features.  Four input data frames are required; cash, holidays, 
 # paydays, and events.  A single 'cash' data frame is returned to be used 
 # for training and prediction.
-##################################################################
+################################################################################
 fetch <- function(forecastTo   = today()+30,
                   dataDir      = "../../resources",
                   usageFile    = "usage-micro.rds",
@@ -261,40 +253,44 @@ fetch <- function(forecastTo   = today()+30,
     
     cash <- cache("cash", {
         cash <- fetchCash(sprintf("%s/%s", dataDir, usageFile), forecastTo)
+        
         addDateFeatures(cash)
         cash <- addPaydays(cash, paydaysFile, dataDir, forecastTo)
         cash <- addHolidays(cash, holidaysFile, dataDir, forecastTo)
         #cash <- addEvents(cash, eventsFile, dataDir)        
         addTrends(cash)
         
-        # tidy up a bit
+        loginfo("tidying up the cash data set")
         cash <- subset(cash, select=c(8:10,1:7,11:ncol(cash)))
         setkeyv(cash, c("atm", "trandate"))
     })
     
     # sanity check - only 'usage' can be NA, all others must be finite
+    loginfo("running sanity checks")
     cashNoUsage <- subset(cash, select=-c(usage))
     finite <- is.finite(cashNoUsage)
     if(!all(finite)) {
-        stop(sprintf("All values must be finite!  Check %s", 
-                     paste(names(finite)[!finite], collapse=", ")))
+        stop(sprintf("All values must be finite!  Check %s", paste(names(finite)[!finite], collapse=", ")))
     }
     
     return(cash)
 }
 
-##################################################################
+################################################################################
 # Checks all columns/features in a data frame to ensure
 # they are 'finite' meaning not NA, NULL, NaN, etc.
-##################################################################
+################################################################################
 is.finite.data.frame <- function(df){
     sapply(df, function(col) all(is.finite(col)))
 }
 
-##################################################################
+################################################################################
 # Returns a default value if the input is NA.
-##################################################################
+################################################################################
 default <- function(value, default) {
     value[is.na(value)] <- default
     return(value)
 }
+
+# the poorly named 'CJ' function is data.table's fast expand.matrix function
+cross.join <- function (..., start, end) CJ(...)
