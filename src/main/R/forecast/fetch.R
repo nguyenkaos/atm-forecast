@@ -31,10 +31,10 @@ addHolidays <- function(cash, holidays.file, data.dir, forecast.to) {
     
     # grab the raw holidays data
     holidays.raw <- read.csv(sprintf("%s/%s", data.dir, holidays.file),
-                    col.names=c("trandate", "holiday", "NULL"),
-                    colClasses=c("Date", "character", "NULL"))
-    holidays <- data.table(holidays.raw, key="trandate")
-    holidays.max <- max(holidays$trandate, na.rm=T)
+                             col.names=c("date", "NULL", "holiday"),
+                             colClasses=c("Date", "NULL", "character"))
+    holidays <- data.table(holidays.raw, key="date")
+    holidays.max <- max(holidays$date, na.rm=T)
     
     # ensure that the holidays data set is complete
     if(holidays.max < forecast.to)
