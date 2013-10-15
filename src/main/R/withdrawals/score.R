@@ -8,12 +8,12 @@ score <- function(data, fit) {
     if(nrow(data) > 0 && !is.null(fit)) {
         # predict the training set 
         data$usage.hat <- predict(fit, newdata=data)
-        data$mape <- mapply(mape, data$usage, data$usage.hat)
-        data$score <- mapply(points, data$mape)
+        data$ape <- mapply(ape, data$usage, data$usage.hat)
+        data$score <- mapply(points, data$ape)
     } else {
         # not enough information to score
         data$usage.hat <- NA
-        data$mape <- NA
+        data$ape <- NA
         data$score <- NA
     }
     
@@ -21,31 +21,31 @@ score <- function(data, fit) {
 }
 
 #
-# Calculates the MAPE or "Mean Adjusted Percent Error" when given a single
+# Calculates the APE or "Adjusted Percent Error" when given a single
 # actual outcome and the predicted outcome.
 #
-mape <- function(actual, predict) {
-    mape <- NA
+ape <- function(actual, predict) {
+    ape <- NA
     
     if(!is.na(actual))
-        mape <- abs((actual - predict) / actual)
+        ape <- abs((actual - predict) / actual)
     
-    return(mape)
+    return(ape)
 }
 
 #
-# Calculates the number of competition points awarded based on the mape.
+# Calculates the number of competition points awarded based on the ape.
 #
-points <- function(mape) {
+points <- function(ape) {
     score <- NA
     
-    if(is.na(mape))
+    if(is.na(ape))
         score <- NA
-    else if(mape <= 0.05) 
+    else if(ape <= 0.05) 
         score <- 2.0
-    else if(mape <= 0.10)
+    else if(ape <= 0.10)
         score <- 1.0
-    else if(mape <= 0.20)
+    else if(ape <= 0.20)
         score <- 0.5
     else
         score <- 0.0

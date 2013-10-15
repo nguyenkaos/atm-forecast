@@ -23,7 +23,7 @@ trainAndScore <- function(by, data, method, split.at, default, ...) {
     result <- NULL
     if(!is.null(fit)) {
         scored <- score(data, fit)
-        result <- list(scored$usage.hat, scored$mape, scored$score)  
+        result <- list(scored$usage.hat, scored$ape, scored$score)  
     } 
     return(result)
 }

@@ -1,5 +1,44 @@
 
 #
+# Cleans and merges the input data and creates all of the necessary 
+# features.  Four input data frames are required; cash, holidays, 
+# paydays, and events.  A single 'cash' data frame is returned to be used 
+# for training and prediction.
+#
+fetch <- function(forecast.to   = today()+30,
+                  data.dir      = "../../resources",
+                  usage.file    = "usage-micro.rds",
+                  holidays.file = "holidays.csv",
+                  events.file   = "events.csv",
+                  paydays.file  = "paydays.csv") {
+    
+    cash <- cache("cash", {
+        
+        # build out the feature set
+        cash <- fetchCash(sprintf("%s/%s", data.dir, usage.file), forecast.to)
+        addDateFeatures(cash)
+        addPaydays(cash, paydays.file, data.dir, forecast.to)
+        addHolidays(cash, holidays.file, data.dir, forecast.to)
+        addTrends(cash)
+        #cash <- addEvents(cash, events.file, data.dir)        
+        
+        loginfo("tidying up the cash data set")
+        setkeyv(cash, c("atm", "trandate"))
+        setcolorder(cash, neworder=c(2,1,3,4:ncol(cash)))
+        
+        # only 'usage' can be NA, all others must be finite
+        loginfo("running sanity checks")
+        finite <- is.finite(cash)
+        if(sum(finite) < length(colnames(cash)) - 1) {
+            bad <- paste(names(finite)[!finite], collapse=", ") 
+            stop(sprintf("all values must be finite: '%s'", bad))
+        }
+        
+        cash
+    })
+}
+
+#
 # Builds a set of features related to the date.
 #
 addDateFeatures <- function(cash) {
@@ -235,45 +274,6 @@ fetchCash <- function(filename, forecast.to) {
     hist.complete <- hist[expected, list(
         usage = if(trandate > hist.max) NA_real_ else max(usage, 0, na.rm=T)
     )]
-}
-
-#
-# Cleans and merges the input data and creates all of the necessary 
-# features.  Four input data frames are required; cash, holidays, 
-# paydays, and events.  A single 'cash' data frame is returned to be used 
-# for training and prediction.
-#
-fetch <- function(forecast.to   = today()+30,
-                  data.dir      = "../../resources",
-                  usage.file    = "usage-micro.rds",
-                  holidays.file = "holidays.csv",
-                  events.file   = "events.csv",
-                  paydays.file  = "paydays.csv") {
-    
-    cash <- cache("cash", {
-        
-        # build out the feature set
-        cash <- fetchCash(sprintf("%s/%s", data.dir, usage.file), forecast.to)
-        addDateFeatures(cash)
-        addPaydays(cash, paydays.file, data.dir, forecast.to)
-        addHolidays(cash, holidays.file, data.dir, forecast.to)
-        addTrends(cash)
-        #cash <- addEvents(cash, events.file, data.dir)        
-        
-        loginfo("tidying up the cash data set")
-        setkeyv(cash, c("atm", "trandate"))
-        setcolorder(cash, neworder=c(2,1,3,4:ncol(cash)))
-        
-        # only 'usage' can be NA, all others must be finite
-        loginfo("running sanity checks")
-        finite <- is.finite(cash)
-        if(sum(finite) < length(colnames(cash)) - 1) {
-            bad <- paste(names(finite)[!finite], collapse=", ") 
-            stop(sprintf("all values must be finite: '%s'", bad))
-        }
-        
-        cash
-    })
 }
 
 

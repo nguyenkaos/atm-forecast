@@ -14,10 +14,10 @@ library("foreach", quietly=T)
 
 # other project sources
 source("../common/cache.R")
+source("../common/utils.R")
 source("fetch.R")
 source("train.R")
 source("score.R")
-source("utils.R")
 
 basicConfig(level=loglevels[opts$logLevel])
 
@@ -39,7 +39,7 @@ subset.expr <- parse(text = opts$subset)
 # train and score the model by atm
 score.by.atm <- cash[ 
     eval(subset.expr), 
-    c("usage.hat","mape","score") := trainAndScore(
+    c("usage.hat","ape","score") := trainAndScore(
         .BY, .SD, 
         method = "gbm",
         split.at = as.Date(opts$splitAt), 
@@ -65,6 +65,11 @@ loginfo("forecasting complete and written to %s", filename)
 # show the scores for july and august
 score.by.atm [trandate>'2013-06-30' & trandate<'2013-09-01',
               list(
-                  score=sum(score, na.rm=T), 
+                  score=sum(score, na.rm=T),
+                  mape=mean(ape,na.rm=T),
                   count=length(unique(atm))
               ), by=month(trandate)]
+
+
+
+
