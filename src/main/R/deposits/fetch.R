@@ -12,7 +12,6 @@ fetch <- function(file="../../resources/deposits.rds") {
     
     # build a feature set indexed by (atm, date)
     deposits <- readRDS(file)
-    deposits <- deposits[sample(1:nrow(deposits), .10*nrow(deposits))]
     addDates(deposits)
     addHolidays(deposits)
     addPaydays(deposits)
