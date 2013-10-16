@@ -1,51 +1,75 @@
 
+library("lubridate")
+
+source("../common/cache.R")
+source("../common/utils.R")
+
 #
 # Cleans and merges the input data and creates all of the necessary 
 # features.  Four input data frames are required; cash, holidays, 
 # paydays, and events.  A single 'cash' data frame is returned to be used 
 # for training and prediction.
 #
-fetch <- function(forecast.to   = today()+30,
-                  data.dir      = "../../resources",
-                  usage.file    = "usage-micro.rds",
-                  holidays.file = "holidays.csv",
-                  events.file   = "events.csv",
-                  paydays.file  = "paydays.csv") {
+fetch <- function( history.file,
+                   forecast.to   = today()+30,
+                   holidays.file = "holidays.csv",
+                   events.file   = "events.csv",
+                   paydays.file  = "paydays.csv",
+                   data.dir      = "../../resources") {
     
-    cash <- cache("cash", {
-        
-        # build out the feature set
-        cash <- fetchCash(sprintf("%s/%s", data.dir, usage.file), forecast.to)
-        addDateFeatures(cash)
-        addPaydays(cash, paydays.file, data.dir, forecast.to)
-        addHolidays(cash, holidays.file, data.dir, forecast.to)
-        addTrends(cash)
-        #cash <- addEvents(cash, events.file, data.dir)        
-        
-        loginfo("tidying up the cash data set")
-        setkeyv(cash, c("atm", "trandate"))
-        setcolorder(cash, neworder=c(2,1,3,4:ncol(cash)))
-        
-        # only 'usage' can be NA, all others must be finite
-        loginfo("running sanity checks")
-        finite <- is.finite(cash)
-        if(sum(finite) < length(colnames(cash)) - 1) {
-            bad <- paste(names(finite)[!finite], collapse=", ") 
-            stop(sprintf("all values must be finite: '%s'", bad))
-        }
-        
-        cash
-    })
+    features <- fetchHistory(sprintf("%s/%s", data.dir, history.file), forecast.to)
+    addDateFeatures(features)
+    addPaydays(features, paydays.file, data.dir, forecast.to)
+    addHolidays(features, holidays.file, data.dir, forecast.to)
+    addTrends(features)
+    #features <- addEvents(features, events.file, data.dir)        
+    
+    loginfo("tidying up the features data")
+    setkeyv(features, c("atm", "trandate"))
+    setcolorder(features, neworder=c(2,1,3,4:ncol(features)))
+    
+    # only 'usage' can be NA, all others must be finite
+    loginfo("running sanity checks")
+    finite <- is.finite(features)
+    if(sum(finite) < length(colnames(features)) - 1) {
+        bad <- paste(names(finite)[!finite], collapse=", ") 
+        stop(sprintf("all values must be finite: '%s'", bad))
+    }
+    
+    features
+}
+
+
+#
+# In the original data set there is no record of days where there
+# is no usage.  This is extremely valuable information to train
+# with.  Assume that any missing days within the range of dates
+# covered are zero-usage days and need to be added to the data.
+#
+fetchHistory <- function(history.path, forecast.to) {
+    loginfo("fetching historical usage data")
+    
+    # fetch the history of ATM usage; days with 0 volume are missing
+    hist <- data.table(readRDS(history.path), key = c("atm","trandate"))   
+    hist.min <- min(hist$trandate)
+    hist.max <- max(hist$trandate)
+    hist.atms <- as.character(unique(hist$atm))
+    
+    # 'expected' includes missing days in the past and future days that need forecast
+    expected <- cross.join(atm = hist.atms, trandate = seq(hist.min, forecast.to, by="day"))
+    hist.complete <- hist[expected, list(
+        usage = if(trandate > hist.max) NA_real_ else max(usage, 0, na.rm=T)
+    )]
 }
 
 #
 # Builds a set of features related to the date.
 #
-addDateFeatures <- function(cash) {
+addDateFeatures <- function(features) {
     loginfo("creating date features")
     
     # add date related features
-    cash[, `:=`(
+    features[, `:=`(
         atm = ordered(atm),
         trandate = as.Date(trandate, format="%m/%d/%Y"),
         trandate.n = as.integer(trandate),
@@ -65,7 +89,7 @@ addDateFeatures <- function(cash) {
 # Fetches the holidays data and merges this with the original
 # data set.
 #
-addHolidays <- function(cash, holidays.file, data.dir, forecast.to) {
+addHolidays <- function(features, holidays.file, data.dir, forecast.to) {
     loginfo("creating holiday features")
     
     # grab the raw holidays data
@@ -79,11 +103,11 @@ addHolidays <- function(cash, holidays.file, data.dir, forecast.to) {
     if(holidays.max < forecast.to)
         stop(sprintf("holidays data required up to %s, but only found up to %s", forecast.to, holidays.max))
     
-    # holidays - merge with the cash data
-    setkeyv(cash, c("trandate", "atm"))
-    cash[holidays, holiday := holiday]
-    cash[is.na(holiday), holiday := "none"]
-    cash[,`:=`(
+    # holidays - merge with the features data
+    setkeyv(features, c("trandate", "atm"))
+    features[holidays, holiday := holiday]
+    features[is.na(holiday), holiday := "none"]
+    features[,`:=`(
         holiday = as.factor(holiday),
         holiday.n = as.numeric(as.factor(holiday))
     )]
@@ -93,13 +117,13 @@ addHolidays <- function(cash, holidays.file, data.dir, forecast.to) {
 # Fetches the paydays data and merges this with the original
 # data set.
 #
-addPaydays <- function(cash, paydays.file, data.dir, forecast.to) {
+addPaydays <- function(features, paydays.file, data.dir, forecast.to) {
     loginfo("creating payday features")
     
     # read the paydays into a data.table
     paydays.raw <- read.csv(sprintf("%s/%s", data.dir, paydays.file), 
-                    col.names=c("base","trandate","payday","type"),
-                    colClasses=c("NULL", "Date", "character", "NULL"))
+                            col.names=c("base","trandate","payday","type"),
+                            colClasses=c("NULL", "Date", "character", "NULL"))
     paydays <- data.table(paydays.raw, key="trandate")
     paydays.max <- max(paydays$trandate, na.rm=T)
     
@@ -113,10 +137,10 @@ addPaydays <- function(cash, paydays.file, data.dir, forecast.to) {
                        by="trandate"]
     
     # add the paydays data to the rest of the features
-    setkeyv(cash, c("trandate", "atm"))
-    cash[paydays, payday := payday]
-    cash[is.na(payday), payday:="none"]
-    cash[,`:=`(
+    setkeyv(features, c("trandate", "atm"))
+    features[paydays, payday := payday]
+    features[is.na(payday), payday:="none"]
+    features[,`:=`(
         payday = as.factor(payday),
         payday.n = as.numeric(as.factor(payday))
     )]
@@ -125,7 +149,7 @@ addPaydays <- function(cash, paydays.file, data.dir, forecast.to) {
 #
 # Adds events to the data set.
 #
-addEvents <- function(cash, events.file, data.dir) {
+addEvents <- function(features, events.file, data.dir) {
     loginfo("creating event features")
     
     # events - clean the data gathered from stub hub
@@ -142,11 +166,11 @@ addEvents <- function(cash, events.file, data.dir) {
                     eventTickets = sum(eventTickets), 
                     eventDistance = mean.finite(eventDistance, default=3000000))
     
-    # events - merge with cash - collapse multiple events into 1 row for each atm/date
+    # events - merge with features - collapse multiple events into 1 row for each atm/date
     events <- data.table(events, key="trandate")
-    cash <- merge(x=cash, y=events, all.x=TRUE, by=c("atm","trandate"))
+    features <- merge(x=features, y=events, all.x=TRUE, by=c("atm","trandate"))
     
-    return(cash)
+    return(features)
 }
 
 #
@@ -253,27 +277,3 @@ addTrends <- function(data) {
                 pay.all.sd = sd.finite(usage)),
          by = payday.n]   
 }
-
-#
-# In the original data set there is no record of days where there
-# is no usage.  This is extremely valuable information to train
-# with.  Assume that any missing days within the range of dates
-# covered are zero-usage days and need to be added to the data.
-#
-fetchCash <- function(filename, forecast.to) {
-    loginfo("fetching historical usage/cash data")
-    
-    # fetch the history of ATM usage; days with 0 volume are missing
-    hist <- data.table(readRDS(filename), key = c("atm","trandate"))   
-    hist.min <- min(hist$trandate)
-    hist.max <- max(hist$trandate)
-    hist.atms <- as.character(unique(hist$atm))
-    
-    # 'expected' includes missing days in the past and future days that need forecast
-    expected <- cross.join(atm = hist.atms, trandate = seq(hist.min, forecast.to, by="day"))
-    hist.complete <- hist[expected, list(
-        usage = if(trandate > hist.max) NA_real_ else max(usage, 0, na.rm=T)
-    )]
-}
-
-

@@ -26,36 +26,39 @@ if(opts$parallel)
     source("../common/parallel.R")   
 
 # fetch and clean the input data
-cash <- fetch(forecast.to   = today() + opts$forecastOut,
-              usage.file    = opts$usageFile, 
-              holidays.file = opts$holidaysFile, 
-              events.file   = opts$eventsFile, 
-              paydays.file  = opts$paydaysFile, 
-              data.dir      = opts$dataDir)
+withd <- cache("withdrawals-features", {
+    fetch( history.file = opts$historyFile,
+           forecast.to  = today() + opts$forecastOut,
+           data.dir     = opts$dataDir)
+})
 
 # an expression can be provided to exclude certain ATMs; ex 'atm<median(atm)'
 subset.expr <- parse(text = opts$subset)
 
 # train and score the model by atm
-score.by.atm <- cash[ 
-    eval(subset.expr), 
-    c("usage.hat","ape","score") := trainAndScore(
-        .BY, .SD, 
-        method = "gbm",
-        split.at = as.Date(opts$splitAt), 
-        default = expand.grid(.interaction.depth=2, .n.trees=50, .shrinkage=0.1), 
-        verbose = F, 
-        distribution = "poisson"), 
-    by=atm]
-saveRDS(score.by.atm, ".cache/score-by-atm.rds")
+score.by.atm <- cache("withd-score-by-atm", {
+    withd[ 
+        eval(subset.expr), 
+        c("usage.hat","ape","score") := trainAndScore(
+            .BY, 
+            .SD, 
+            method       = "gbm",
+            split.at     = as.Date(opts$splitAt), 
+            default      = expand.grid(.interaction.depth=2, .n.trees=50, .shrinkage=0.1), 
+            verbose      = F, 
+            distribution = "poisson",
+            cache.prefix = "withd-fit"), 
+        by=atm]
+})
 
 # extract the forecast
-forecast <- score.by.atm [trandate >= today(), 
-                          list (
-                              atm = atm, 
-                              trandate = trandate,
-                              usage.hat = round(usage.hat)
-                          ), ]
+forecast <- score.by.atm [
+    trandate >= today(), 
+    list (
+        atm = atm, 
+        trandate = trandate,
+        usage.hat = round(usage.hat)
+    ), ]
 
 # export the forecast to a csv file
 filename <- sprintf("forecast-%s.csv", today())
@@ -63,13 +66,10 @@ write.csv(forecast, filename)
 loginfo("forecasting complete and written to %s", filename)
 
 # show the scores for july and august
-score.by.atm [trandate>'2013-06-30' & trandate<'2013-09-01',
-              list(
-                  score=sum(score, na.rm=T),
-                  mape=mean(ape,na.rm=T),
-                  count=length(unique(atm))
-              ), by=month(trandate)]
-
-
-
-
+score.by.atm [
+    trandate>'2013-06-30' & trandate<'2013-09-01',
+    list(
+        score=sum(score, na.rm=T),
+        mape=mean(ape,na.rm=T),
+        count=length(unique(atm))
+    ), by=month(trandate)]

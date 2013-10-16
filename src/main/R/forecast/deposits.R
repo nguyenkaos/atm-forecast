@@ -1,22 +1,28 @@
 #!/usr/bin/env Rscript
 
+# gather the command line options
+source("options.R")
+opts <- getOptions()
+
 # required libraries
-library("plyr", quietly=T)
-library("caret", quietly=T)
-library("data.table", quietly=T)
-library("lubridate", quietly=T)
-library("logging", quietly=T)
-library("foreach", quietly=T)
+library("plyr")
+library("caret")
+library("data.table")
+library("lubridate")
+library("logging")
+library("foreach")
 
 # other project sources
 source("../common/cache.R")
 source("../common/utils.R")
-source("../common/fetch.R")
+source("fetch.R")
+source("train.R")
+source("score.R")
 
-basicConfig(level=loglevels["INFO"])
+basicConfig(level=loglevels[opts$logLevel])
 
 # fetch and clean the input data
-withd <- cache("withd", {
+deposits <- cache("deposits-features", {
     fetch( history.file = "deposits-all.rds",
            forecast.to  = today() + 30,
            data.dir     = "../../resources")
@@ -24,15 +30,17 @@ withd <- cache("withd", {
 
 # train and score the model by atm
 score.by.atm <- cache("deposit-score-by-atm", {
-    withd[ 
+    deposits[ 
         eval(subset.expr), 
         c("usage.hat","ape","score") := trainAndScore(
-            .BY, .SD, 
-            method = "gbm",
-            split.at = as.Date(opts$splitAt), 
-            default = expand.grid(.interaction.depth=2, .n.trees=50, .shrinkage=0.1), 
-            verbose = F, 
-            distribution = "poisson"), 
+            .BY, 
+            .SD, 
+            method       = "gbm",
+            split.at     = as.Date(opts$splitAt), 
+            default      = expand.grid(.interaction.depth=2, .n.trees=50, .shrinkage=0.1), 
+            verbose      = F, 
+            distribution = "poisson",
+            cache.prefix = "deposits-fit"), 
         by=atm]
 })
 
@@ -58,6 +66,3 @@ score.by.atm [
         mape=mean(ape,na.rm=T),
         count=length(unique(atm))
     ), by=month(trandate)]
-
-
-

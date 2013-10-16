@@ -9,12 +9,12 @@ onError <- function(e) {
 # set with all features, along with the prediction and scoring
 # metrics.  
 ##################################################################
-trainAndScore <- function(by, data, method, split.at, default, ...) {
-    atm <- by$atm
-    loginfo("Training '%s' with train/test split at '%s'", atm, split.at)
+trainAndScore <- function(by, data, method, split.at, default, cache.prefix, ...) {
+    by <- by[[1]]
+    loginfo("Training '%s' with train/test split at '%s' with '%s' obs.", by, split.at, nrow(data))
     
     # build and cache the fitted model
-    cacheAs <- sprintf("fit-%s", atm)
+    cacheAs <- sprintf("%s-%s", cache.prefix, by)
     fit <- cache(cacheAs, {
         trainer(data, method, split.at, ...)
     })
@@ -25,6 +25,7 @@ trainAndScore <- function(by, data, method, split.at, default, ...) {
         scored <- score(data, fit)
         result <- list(scored$usage.hat, scored$ape, scored$score)  
     } 
+    
     return(result)
 }
 

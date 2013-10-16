@@ -26,18 +26,12 @@ getOptions <- function() {
         make_option(c("-d", "--dataDir"),
                     help="Directory containing the data files [default: %default]",
                     default="../../resources"),
-        make_option(c("--usageFile"), 
-                    help="RDS file containing the ATM usage data [default: %default]",
-                    default="usage-micro.rds"),
-        make_option(c("--holidaysFile"), 
-                    help="CSV file containing holidays data [default: %default]",
-                    default="holidays.csv"),
+        make_option(c("--historyFile"), 
+                    help="RDS file containing the ATM history [default: %default]",
+                    default="withdrawals-micro.rds"),
         make_option(c("--eventsFile"), 
                     help="CSV file containing events data [default: %default]",
-                    default="events.csv"),
-        make_option(c("--paydaysFile"), 
-                    help="CSV file containing pay days data [default: %default]",
-                    default="paydays.csv")
+                    default="events.csv")
     )
     
     opts <- parse_args(OptionParser(option_list=all_options))
