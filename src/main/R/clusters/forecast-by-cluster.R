@@ -3,6 +3,7 @@ library("logging")
 library("data.table")
 library("plyr")
 
+source("utils.R")
 source("../forecast/fetch.R")
 source("../forecast/train.R")
 source("../forecast/score.R")
@@ -10,14 +11,32 @@ source("../forecast/score.R")
 basicConfig(level=loglevels["INFO"])
 
 #
+# Scores all of the cluster definitions within a directory.
+#
+scoreAllClusters <- function (cluster.dir = "micro", 
+                              history.file = "deposits-micro.rds") {
+    
+    cluster.files <- list.files(cluster.dir, full.names=T)
+    scores <- ldply(cluster.files, function(cluster.path) { 
+        forecastByCluster(cluster.path, history.file)
+    })
+}
+
+#
 # Creates a forecast by training within a defined set of clusters.
 #
-cluster.forecast <- function(cluster.path = "micro/random-clusters.csv", 
-                             history.file = "deposits-micro.rds") {
-    cluster.set.id <- basename(cluster.path)
+forecastByCluster <- function (cluster.path = "micro/random-clusters.csv", 
+                               history.file = "deposits-micro.rds") {
+    
+    # create a name/id for this cluster definition
+    cluster.set.id <- basename.only(cluster.path)
+    loginfo("training with cluster: '%s'", cluster.set.id)
+    
+    # create a unique name for the deposit feature set to allow it to be cached easily
+    deposits.cache.name <- sprintf("%s-features", basename.only(history.file))
     
     # read in the feature set
-    deposits <- cache("deposits-features", {
+    deposits <- cache (deposits.cache.name, {
         fetch( history.file = history.file,
                forecast.to  = today() + 30,
                data.dir     = "../../resources")
@@ -51,7 +70,7 @@ cluster.forecast <- function(cluster.path = "micro/random-clusters.csv",
     
     # show the scores for july and august
     score.by.atm [
-        trandate>'2013-06-30' & trandate<'2013-09-01',
+        trandate > '2013-06-30' & trandate < '2013-09-01',
         list(
             cluster.set = cluster.set.id,
             score       = sum(score, na.rm=T),
@@ -59,24 +78,3 @@ cluster.forecast <- function(cluster.path = "micro/random-clusters.csv",
             count       = length(unique(atm))
         ), by=month(trandate)]
 }
-
-#
-# Scores all of the cluster definitions within a directory.
-#
-score.clusters <- function(cluster.dir = "micro", 
-                           history.file = "deposits-micro.rds") {
-    
-    cluster.files <- list.files(cluster.dir, full.names=T)
-    scores <- ldply(cluster.files, function(cluster.path) { 
-        cluster.forecast(cluster.path, history.file)
-    })
-}
-
-
-
-
-
-
-
-
-
