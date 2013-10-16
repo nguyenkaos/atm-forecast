@@ -28,7 +28,7 @@ ape <- function(actual, predict) {
     ape <- NA
     
     if(!is.na(actual))
-        ape <- abs((actual - predict) / actual)
+        ape <- abs((actual - predict) / (actual+1))
     
     return(ape)
 }
