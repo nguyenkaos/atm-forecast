@@ -16,10 +16,39 @@ basicConfig(level=loglevels["INFO"])
 scoreAllClusters <- function (cluster.dir = "micro", 
                               history.file = "deposits-micro.rds") {
     
+    # create a forecast for each cluster definition
     cluster.files <- list.files(cluster.dir, full.names=T)
     scores <- ldply(cluster.files, function(cluster.path) { 
         forecastByCluster(cluster.path, history.file)
     })
+    scores <- data.table(scores, key = c("atm","trandate"))
+    
+    # extract the baseline/champion scores (no clusters)
+    champ.name <- "no-clusters"
+    champ <- scores [cluster.set == champ.name]
+    setnames(champ, "ape", "ape.champ")
+    setnames(champ, "score", "score.champ")
+    
+    # add the champ's scores to the competitors data for comparison
+    competitors <- scores [cluster.set != champ.name]
+    competitors [champ, `:=`(
+        ape.delta = ape - ape.champ,
+        score.delta = score - score.champ
+    )]
+    
+    # add in the 9 volatility/volume segments
+    atm.segments <- data.table (read.csv ("../../resources//atm-segments.csv"), key = "atm")
+    competitors [atm.segments, `:=` (
+        volatility = volatility,
+        volume = volume
+    )]
+    
+    competitors [!is.na(usage.hat),
+                 list(
+                     cluster.set,
+                     mape.delta = mean(ape.delta, na.rm=T),
+                     score.delta = sum(score.delta, na.rm=T)
+                 ), by = c("volatility", "volume")]
 }
 
 #
@@ -38,7 +67,7 @@ forecastByCluster <- function (cluster.path = "micro/random-clusters.csv",
     # read in the feature set
     deposits <- cache (deposits.cache.name, {
         fetch( history.file = history.file,
-               forecast.to  = today() + 30,
+               forecast.to  = today(),
                data.dir     = "../../resources")
     })
     
@@ -47,12 +76,8 @@ forecastByCluster <- function (cluster.path = "micro/random-clusters.csv",
     csv <- read.csv(cluster.path, col.names = c("atm","cluster"))
     clusters <- data.table(csv, key="atm")
     
-    # merge the feature set with the cluster set
+    # merge the feature set with the cluster definition
     deposits[clusters, cluster := cluster]
-    deposits[,`:=`(
-        atm = factor(atm),
-        atm = as.integer(atm)
-    ),]
     
     # forecast by cluster - only train those with a cluster
     score.by.atm <- deposits[
@@ -62,19 +87,13 @@ forecastByCluster <- function (cluster.path = "micro/random-clusters.csv",
             .SD, 
             method       = "gbm",
             split.at     = "2013-06-30",
+            formula      = usage ~ . -atm,
             default      = expand.grid(.interaction.depth=2, .n.trees=50, .shrinkage=0.1), 
             verbose      = F, 
             distribution = "poisson",
             cache.prefix = sprintf("%s-fit", cluster.set.id)),
-        by=cluster]
+        by = cluster]
     
-    # show the scores for july and august
-    score.by.atm [
-        trandate > '2013-06-30' & trandate < '2013-09-01',
-        list(
-            cluster.set = cluster.set.id,
-            score       = sum(score, na.rm=T),
-            mape        = mean(ape,na.rm=T),
-            count       = length(unique(atm))
-        ), by=month(trandate)]
+    # add in the name of the cluster set that was forecasted
+    score.by.atm[, cluster.set := cluster.set.id, ]
 }
