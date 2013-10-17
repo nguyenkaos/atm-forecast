@@ -22,7 +22,7 @@ getOptions <- function() {
                     default = "../../resources"),
         make_option(c("--historyFile"), 
                     help    = "RDS file containing the ATM history [default: %default]",
-                    default = "deposits-micro.rds"),
+                    default = "deposits-micro.rds")
     )
     opts <- parse_args (OptionParser (option_list = all_options))
 }
