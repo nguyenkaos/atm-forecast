@@ -50,7 +50,7 @@ basicConfig (level = loglevels [opts$logLevel])
 # fetch and clean the input data
 deposits <- cache("deposits-features", {
     fetch( history.file = opts$historyFile,
-           forecast.to  = opts$forecastTo,
+           forecast.to  = today() + opts$forecastOut,
            data.dir     = opts$dataDir)
 })
 
