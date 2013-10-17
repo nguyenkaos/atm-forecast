@@ -9,14 +9,14 @@ onError <- function(e) {
 # set with all features, along with the prediction and scoring
 # metrics.  
 ##################################################################
-trainAndScore <- function(by, data, method, split.at, default, cache.prefix, ...) {
+trainAndScore <- function(by, data, method, split.at, formula=usage~., default, cache.prefix, ...) {
     by <- by[[1]]
     loginfo("Training '%s' with train/test split at '%s' with '%s' obs.", by, split.at, nrow(data))
     
     # build and cache the fitted model
     cacheAs <- sprintf("%s-%s", cache.prefix, by)
     fit <- cache(cacheAs, {
-        trainer(data, method, split.at, ...)
+        trainer(data, method, split.at, formula, default, ...)
     })
 
     # score the model
@@ -32,7 +32,7 @@ trainAndScore <- function(by, data, method, split.at, default, cache.prefix, ...
 ##################################################################
 # Trains a subset of data.
 ##################################################################
-trainer <- function(data, method, split.at, default, f=usage~., ...) {
+trainer <- function(data, method, split.at, formula, default,  ...) {
     fit <- NULL
     
     train <- subset(data, trandate < split.at)
@@ -42,7 +42,7 @@ trainer <- function(data, method, split.at, default, f=usage~., ...) {
                              repeats=3, 
                              allowParallel=T)
         tryCatch(
-            fit <- train(f, data=train, method=method, trControl=ctrl, ...), 
+            fit <- train(formula, data=train, method=method, trControl=ctrl, ...), 
             error=onError
         )
         
@@ -50,7 +50,7 @@ trainer <- function(data, method, split.at, default, f=usage~., ...) {
         if(is.null(fit)) {
             warning("could not find tuning parameters!", immediate.=T)
             tryCatch( 
-                fit <- train(f, data=train, method=method, tuneGrid=default), 
+                fit <- train(formula, data=train, method=method, tuneGrid=default), 
                 error=onError
             )      
         }  
