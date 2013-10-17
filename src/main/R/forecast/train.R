@@ -11,7 +11,7 @@ onError <- function(e) {
 ##################################################################
 trainAndScore <- function(by, data, method, split.at, formula=usage~., default, cache.prefix, ...) {
     by <- by[[1]]
-    loginfo("Training '%s' with train/test split at '%s' with '%s' obs.", by, split.at, nrow(data))
+    loginfo("Training group '%s' split at '%s' with '%s' obs.", by, split.at, nrow(data))
     
     # build and cache the fitted model
     cacheAs <- sprintf("%s-%s", cache.prefix, by)
@@ -23,8 +23,8 @@ trainAndScore <- function(by, data, method, split.at, formula=usage~., default, 
     result <- NULL
     if(!is.null(fit)) {
         scored <- score(data, fit)
-        result <- list(scored$usage.hat, scored$ape, scored$score)  
-    } 
+        result <- list(scored$usage.hat, scored$pe, scored$ape, scored$score)  
+    }
     
     return(result)
 }

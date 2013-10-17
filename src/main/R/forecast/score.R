@@ -8,11 +8,13 @@ score <- function(data, fit) {
     if(nrow(data) > 0 && !is.null(fit)) {
         # predict the training set 
         data$usage.hat <- predict(fit, newdata=data)
+        data$pe <- mapply(pe, data$usage, data$usage.hat)
         data$ape <- mapply(ape, data$usage, data$usage.hat)
         data$score <- mapply(points, data$ape)
     } else {
         # not enough information to score
         data$usage.hat <- NA
+        data$pe <- NA
         data$ape <- NA
         data$score <- NA
     }
@@ -20,17 +22,40 @@ score <- function(data, fit) {
     return(data)  
 }
 
+score.no.predict <- function(data) {
+    result <- NULL
+    
+    if(nrow(data) > 0) {
+        result <- list(mapply(pe, data$usage, data$usage.hat),
+             mapply(ape, data$usage, data$usage.hat),
+             mapply(points, data$ape))
+    } else {
+        # not enough information to score
+        result <- list(NA, NA, NA)
+    }
+    
+    return(data)  
+}
+
+
+#
+# forecasts the percent error
+#
+pe <- function(actual, predict) {
+    pe <- NA
+    
+    if(is.finite(actual) && is.finite(predict))
+        pe <- (predict - actual) / (actual+1)
+    
+    return(pe)
+}
+
 #
 # Calculates the APE or "Adjusted Percent Error" when given a single
 # actual outcome and the predicted outcome.
 #
-ape <- function(actual, predict) {
-    ape <- NA
-    
-    if(!is.na(actual))
-        ape <- abs((actual - predict) / (actual+1))
-    
-    return(ape)
+ape <- function(actual, predict) { 
+    abs(pe(actual, predict)) 
 }
 
 #

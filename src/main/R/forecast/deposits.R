@@ -10,7 +10,7 @@ getOptions <- function() {
                     default = 120),
         make_option(c("--splitAt"),
                     help    = "Date at which to split training vs test [default: %default]",
-                    default = "2013-06-30"),
+                    default = "2013-07-31"),
         make_option(c("-l", "--logLevel"),
                     help    = "Level of logging [default: %default]",
                     default = "INFO"),  
@@ -55,21 +55,22 @@ deposits <- cache("deposits-features", {
 })
 
 # train and score the model by atm
-score.by.atm <- cache("deposit-score-by-atm", {
+challenger.forecast <- cache("deposit-score-by-atm", {
     deposits[ 
         eval (parse (text = opts$subset)), 
-        c("usage.hat","ape","score") := trainAndScore (.BY, .SD, 
-            method       = "gbm",
-            split.at     = as.Date(opts$splitAt), 
-            default      = expand.grid(.interaction.depth=2, .n.trees=50, .shrinkage=0.1), 
-            verbose      = FALSE, 
-            distribution = "poisson",
-            cache.prefix = "deposits-fit"), 
+        c("usage.hat","ape","score") := 
+            trainAndScore (.BY, .SD, 
+                           method       = "gbm",
+                           split.at     = as.Date(opts$splitAt), 
+                           default      = expand.grid(.interaction.depth=2, .n.trees=50, .shrinkage=0.1), 
+                           verbose      = FALSE, 
+                           distribution = "poisson",
+                           cache.prefix = "deposits-fit"), 
         by = atm]
 })
 
 # extract the forecast
-forecast <- score.by.atm [
+forecast <- challenger.forecast [
     trandate >= today(), 
     list (
         atm       = atm, 
@@ -82,11 +83,48 @@ filename <- sprintf("forecast-%s.csv", today())
 write.csv(forecast, filename)
 loginfo("forecasting complete and written to %s", filename)
 
-# show the scores for july and august
-score.by.atm [
-    trandate>'2013-06-30' & trandate<'2013-09-01',
+# the test period is currently August
+compare.start <- "2013-07-31"
+compare.end <- "2013-09-01"
+
+# score the existing champion
+champion.forecast <- readRDS("../../resources/deposits-champion.rds")
+champion.forecast [
+    trandate > compare.start & trandate < compare.end, 
+    `:=`(
+        pe    = pe(usage, usage.hat),
+        c.ape = ape(usage, usage.hat)
+    ),]
+champion.forecast [
+    trandate > compare.start & trandate < compare.end, 
+    score := points(c.ape),
+    ]
+
+champion.august <- champion [
+    trandate > compare.start & trandate < compare.end,
     list(
-        score = sum(score, na.rm=T),
-        mape  = mean(ape,na.rm=T),
-        count = length(unique(atm))
+        score        = sum(score, na.rm=T),
+        mape         = mean(ape, na.rm=T),
+        under.5.ape  = length( ape [ape <= 0.05]),
+        under.10.ape = length( ape [ape <= 0.10 & ape > 0.05]),
+        under.20.ape = length( ape [ape <= 0.20 & ape > 0.10]),
+        over.20.ape  = length( ape [ape >  0.20]),
+        total        = length( ape),
+        atm.count    = length( unique(atm))
     ), by = month(trandate) ]
+
+challenger.july <- challenger [
+    trandate > compare.start & trandate < compare.end,
+    list(
+        score        = sum(score, na.rm=T),
+        mape         = mean(ape, na.rm=T),
+        under.5.ape  = length( ape [ape <= 0.05]),
+        under.10.ape = length( ape [ape <= 0.10 & ape > 0.05]),
+        under.20.ape = length( ape [ape <= 0.20 & ape > 0.10]),
+        over.20.ape  = length( ape [ape >  0.20]),
+        total        = length( ape),
+        atm.count    = length( unique(atm))
+    ), by = month(trandate) ]
+
+
+
