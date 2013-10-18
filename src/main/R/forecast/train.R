@@ -9,7 +9,8 @@ onError <- function(e) {
 # set with all features, along with the prediction and scoring
 # metrics.  
 ##################################################################
-trainAndScore <- function(by, data, method, split.at, formula=usage~., default, cache.prefix, ...) {
+trainAndScore <- function(by, data, method, split.at, formula = usage ~ ., default, cache.prefix, ...) {
+    
     by <- by[[1]]
     loginfo("Training group '%s' split at '%s' with '%s' obs.", by, split.at, nrow(data))
     
@@ -23,7 +24,7 @@ trainAndScore <- function(by, data, method, split.at, formula=usage~., default, 
     result <- NULL
     if(!is.null(fit)) {
         scored <- score(data, fit)
-        result <- list(scored$usage.hat, scored$pe, scored$ape, scored$score)  
+        result <- with(scored, list(usage.hat, pe, ape, score))
     }
     
     return(result)
@@ -37,10 +38,11 @@ trainer <- function(data, method, split.at, formula, default,  ...) {
     
     train <- subset(data, trandate < split.at)
     if(nrow(train) > 0) {
-        ctrl <- trainControl(method="boot632", 
-                             number=5, 
-                             repeats=3, 
-                             allowParallel=T)
+        ctrl <- trainControl(method        = "boot632", 
+                             number        = 5,
+                             repeats       = 3,
+                             returnData    = FALSE,
+                             allowParallel = TRUE )
         tryCatch(
             fit <- train(formula, data=train, method=method, trControl=ctrl, ...), 
             error=onError
@@ -48,9 +50,9 @@ trainer <- function(data, method, split.at, formula, default,  ...) {
         
         # if parameter tuning failed, use the defaults
         if(is.null(fit)) {
-            warning("could not find tuning parameters!", immediate.=T)
+            warning("could not find tuning parameters!", immediate. = T)
             tryCatch( 
-                fit <- train(formula, data=train, method=method, tuneGrid=default), 
+                fit <- train(formula, data=train, method=method, tuneGrid=default, ...), 
                 error=onError
             )      
         }  
