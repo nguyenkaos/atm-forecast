@@ -1,6 +1,7 @@
 #!/usr/bin/env Rscript
 
 library("optparse")
+library("lubridate")
 
 source("score.R")
 
@@ -24,9 +25,9 @@ opts <- getOptions()
 scores <- scoreAllClusters(opts$clusterDir, opts$historyFile)
 
 # save the scores
-file <- sprintf("cluster-scores-%s.csv", today())
-write.csv(scores, "cluster-scores.csv", row.names=F)
-loginfo("created %s", file)
+scores.file <- sprintf("cluster-scores-%s.csv", today())
+write.csv(scores, scores.file, row.names=F)
+loginfo("created %s", scores.file)
 
 # output the scores
 scores
