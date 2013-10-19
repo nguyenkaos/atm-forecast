@@ -62,29 +62,23 @@ ape <- function(actual, predict) {
 # Calculates the number of competition points awarded based on the ape.
 #
 points <- function(ape) {
-    score <- NA
+    points <- rep (NA, length( ape))
     
-    if(is.na(ape))
-        score <- NA
-    else if(ape <= 0.05) 
-        score <- 2.0
-    else if(ape <= 0.10)
-        score <- 1.0
-    else if(ape <= 0.20)
-        score <- 0.5
-    else
-        score <- 0.0
+    points[ ape <= 0.05] <- 2.0
+    points[ ape <= 0.10 & ape > 0.05] <- 1.0
+    points[ ape <= 0.20 & ape > 0.10] <- 0.5
+    points[ ape > 0.20] <- 0.0
     
-    return(score)
+    return(points)
 }
 
 #
 # Logs the total score and percentage of possible from a scored data set.
 #
 logScore <- function(atm, scored) {
-    score <- sum(scored$score)
-    possible.score <- nrow(scored) * 2
+    score <- sum (scored$score)
+    possible.score <- nrow (scored) * 2
     perc <- (score/possible.score) * 100
-    loginfo("%s --> %.1f points or %.1f%% of points available", atm, score, perc)
+    loginfo ("%s --> %.1f points or %.1f%% of points available", atm, score, perc)
 }
 
