@@ -8,18 +8,18 @@
 cache <- function(cache.name, 
                   expr, 
                   cache.dir   = getOption("cache.dir", default=".cache"), 
-                  clear.cache = getOption("clear.cache", default=F)) {
+                  ignore.cache = getOption("ignore.cache", default=F)) {
     result <- NULL
     cache.file <- sprintf("%s/%s.rds", cache.dir, cache.name)
     
     # has the result already been cached?
-    if(file.exists(cache.file) && clear.cache==F) {
+    if(file.exists(cache.file) && !ignore.cache) {
         loginfo("Found '%s' cached as '%s'", cache.name, cache.file)
         result <- readRDS(cache.file)
         
     } else {
         # eval the expression 
-        loginfo("'%s' has NOT been cached", cache.name)
+        loginfo("'%s' has NOT been cached or is being ignored", cache.name)
         result <- eval(expr)
 
         # sanity check, just in case
@@ -36,4 +36,3 @@ cache <- function(cache.name,
     
     return(result)
 }
-
