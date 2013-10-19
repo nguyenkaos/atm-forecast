@@ -1,4 +1,3 @@
-#!/usr/bin/env Rscript
 
 library("logging")
 library("data.table")
@@ -16,18 +15,24 @@ source("../forecast/score.R")
 scoreAllClusters <- function (cluster.dir = "micro", 
                               history.file = "deposits-micro.rds") {
     
-    # create a forecast for each cluster definition
-    scores <- cache (sprintf("scores-%s", cluster.dir), {
+    features.cache <- sprintf("%s-features", basename.only(history.file))
+    features <- cache (features.cache, {
         
-        # find all the cluster definition files
-        cluster.files <- list.files(cluster.dir, full.names=T)
+        # fetch the usage history and generate the features for training
+        fetch( history.file = history.file,
+               forecast.to  = today(),
+               data.dir     = "../../resources")
+    })
+    
+    scores.cache <- sprintf ("scores-%s", cluster.dir)
+    scores <- cache (scores.cache, {
         
-        # aggregate the forecast score for each cluster definition
-        scores <- ldply(cluster.files, function(cluster.path) { 
-            forecastByCluster(cluster.path, history.file)
-        })
+        # create data set with all cluster definitions
+        scores <- data.table (cluster.file = list.files (cluster.dir, full.names=T))
         
-        data.table(scores, key = c("atm","trandate"))
+        # create a forecast for each cluster definition
+        scores <- scores[ , forecastByCluster (features, .BY), by = cluster.file]
+        setkeyv (scores, c("atm", "trandate"))
     })
     
     # extract the baseline/champion scores (no clusters)
@@ -39,7 +44,7 @@ scoreAllClusters <- function (cluster.dir = "micro",
     # add the champ's scores to the competitors data for comparison
     competitors <- scores [is.finite(usage) & is.finite(usage.hat)]
     competitors [champ, `:=`(
-        ape.delta = ape - ape.champ,
+        ape.delta   = ape - ape.champ,
         score.delta = score - score.champ
     )]
     
@@ -48,15 +53,18 @@ scoreAllClusters <- function (cluster.dir = "micro",
     
     # the NA for volatility/volume is coming from ATM 'OR2430'
     competitors [atm.segments, `:=` (
-        volatility = volatility.segment,
-        volume = volume.segment
+        volume     = volume.segment,
+        volatility = volatility.segment
     )]
-
+    
+    # aggregate the scores
     scores.final <- competitors [
         is.finite(volatility) & is.finite(volume),
         list(
-            mape.delta = mean(ape.delta, na.rm=T),
-            score.delta = sum(score.delta, na.rm=T)
+            mape        = mean(ape),
+            mape.delta  = mean(ape.delta),
+            score       = sum(score),
+            score.delta = sum(score.delta)
         ), 
         by = list(cluster.set, volatility, volume)]
 }
@@ -64,39 +72,30 @@ scoreAllClusters <- function (cluster.dir = "micro",
 #
 # Creates a forecast by training within a defined set of clusters.
 #
-forecastByCluster <- function (cluster.path = "micro/random-clusters.csv", 
-                               history.file = "deposits-micro.rds") {
+forecastByCluster <- function (features, cluster.path = "micro/random-clusters.csv") {
+    if(!is.character(cluster.path))
+        cluster.path <- cluster.path[[1]]
     
     # create a uniqe name for this cluster definition
-    cluster.set.id <- basename.only(cluster.path)
-    loginfo("training with cluster: '%s'", cluster.set.id)
-    
-    # create a unique name for the deposit feature set to allow it to be cached easily
-    deposits.cache.name <- sprintf("%s-features", basename.only(history.file))
-    
-    # read in the feature set
-    deposits <- cache (deposits.cache.name, {
-        fetch( history.file = history.file,
-               forecast.to  = today(),
-               data.dir     = "../../resources")
-    })
+    cluster.set.id <- basename.only (cluster.path)
+    loginfo ("training with cluster: '%s'", cluster.set.id)
     
     # fetch the cluster definition
-    loginfo("fetching and merging the clusters defined by %s", cluster.path)
-    csv <- read.csv(cluster.path, col.names = c("atm", "cluster"))
-    clusters <- data.table(csv, key="atm")
+    loginfo ("fetching and merging the clusters defined by %s", cluster.path)
+    csv <- read.csv (cluster.path, col.names = c("atm", "cluster"))
+    clusters <- data.table (csv, key="atm")
     
     # merge the feature set with the cluster definition
-    deposits[clusters, cluster := cluster]
+    features[clusters, cluster := cluster]
     
     # forecast by cluster - only train those with a cluster
-    score.by.atm <- deposits[
+    score.by.atm <- features[
         
         # only train those that are part of a cluster
         !is.na(cluster) & !is.na(usage), 
         
         # defines how the training occurs
-        c("usage.hat","ape","score") := trainAndScore (
+        c("usage.hat", "pe", "ape", "score") := trainAndScore (
             .BY, 
             .SD, 
             method       = "gbm",
@@ -115,6 +114,12 @@ forecastByCluster <- function (cluster.path = "micro/random-clusters.csv",
         # trained separately for each cluster
         by = cluster ]
     
-    # add in the name of the cluster set that was forecasted
-    score.by.atm[, cluster.set := cluster.set.id, ]
+    # return the raw scoring results for this cluster
+    with (score.by.atm, list (atm         = atm, 
+                              trandate    = trandate, 
+                              usage       = usage, 
+                              usage.hat   = usage.hat, 
+                              ape         = ape, 
+                              score       = score,
+                              cluster.set = cluster.set.id))
 }
