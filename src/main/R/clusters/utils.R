@@ -20,9 +20,3 @@ as.ts <- function(history) {
     # first to allow ATMs with different life spans to be compared
     history.dt <- data.table(atm = names(history.ts), time.series = I(history.ts), key="atm")
 }
-
-basename.only <- function (path) {
-    base <- basename(path)
-    matches <-  regexpr("[^.]+", base)
-    regmatches(base, matches)
-}

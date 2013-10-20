@@ -5,6 +5,7 @@ library("plyr")
 
 source("utils.R")
 source("../common/cache.R")
+source("../common/utils.R")
 source("../forecast/fetch.R")
 source("../forecast/train.R")
 source("../forecast/score.R")

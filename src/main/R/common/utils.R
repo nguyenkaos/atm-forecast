@@ -72,3 +72,9 @@ median.finite <- function(..., default=0) {
     else
         default
 } 
+
+basename.only <- function (path) {
+    base <- basename(path)
+    matches <-  regexpr("[^.]+", base)
+    regmatches(base, matches)
+}
