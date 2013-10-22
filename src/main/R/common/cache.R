@@ -7,13 +7,15 @@
 ############################################################################
 cache <- function(cache.name, 
                   expr, 
-                  cache.dir   = getOption("cache.dir", default=".cache"), 
-                  ignore.cache = getOption("ignore.cache", default=F)) {
+                  cache.dir   = getOption("cache.dir", default = ".cache"), 
+                  cache.ignore = getOption("cache.ignore", default = F),
+                  compress = getOption("cache.compress", default = T)) {
+    
     result <- NULL
     cache.file <- sprintf("%s/%s.rds", cache.dir, cache.name)
     
     # has the result already been cached?
-    if(file.exists(cache.file) && !ignore.cache) {
+    if(file.exists(cache.file) && !cache.ignore) {
         loginfo("Found '%s' cached as '%s'", cache.name, cache.file)
         result <- readRDS(cache.file)
         
@@ -31,7 +33,7 @@ cache <- function(cache.name,
         
         # cache the result
         loginfo("Cacheing '%s' as '%s'", cache.name, cache.file)
-        saveRDS(result, cache.file)
+        saveRDS(result, cache.file, compress = compress)
     }
     
     return(result)
