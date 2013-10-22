@@ -1,53 +1,11 @@
 library("caret")
-
-#
-# Scores a set of predictions made by a model's 'fit'.
-#
-score <- function(data, fit) {
-    
-    if(nrow(data) > 0 && !is.null(fit)) {
-        # predict the training set 
-        data$usage.hat <- predict(fit, newdata=data)
-        data$pe <- mapply(pe, data$usage, data$usage.hat)
-        data$ape <- mapply(ape, data$usage, data$usage.hat)
-        data$score <- mapply(points, data$ape)
-    } else {
-        # not enough information to score
-        data$usage.hat <- NA
-        data$pe <- NA
-        data$ape <- NA
-        data$score <- NA
-    }
-    
-    return(data)  
-}
-
-score.no.predict <- function(data) {
-    result <- NULL
-    
-    if(nrow(data) > 0) {
-        result <- list(mapply(pe, data$usage, data$usage.hat),
-             mapply(ape, data$usage, data$usage.hat),
-             mapply(points, data$ape))
-    } else {
-        # not enough information to score
-        result <- list(NA, NA, NA)
-    }
-    
-    return(data)  
-}
-
+library("Metrics")
 
 #
 # forecasts the percent error
 #
 pe <- function(actual, predict) {
-    pe <- NA
-    
-    if(is.finite(actual) && is.finite(predict))
-        pe <- (predict - actual) / (actual+1)
-    
-    return(pe)
+    (predict - actual) / (actual+1)
 }
 
 #
@@ -55,13 +13,28 @@ pe <- function(actual, predict) {
 # actual outcome and the predicted outcome.
 #
 ape <- function(actual, predict) { 
-    abs(pe(actual, predict)) 
+    abs (pe (actual, predict)) 
+}
+
+#
+# calculates the mean absolute percent error aka mape
+#
+mape <- function(actual, predict) {
+    mean (ape (actual, predict), na.rm = T)
+}
+
+#
+# calculates the number of competition points awarded based on the actual
+# and predicted values.
+#
+points <- function(actual, predict) {
+    points.ape ( ape (actual, predict))
 }
 
 #
 # Calculates the number of competition points awarded based on the ape.
 #
-points <- function(ape) {
+points.ape <- function(ape) {
     points <- rep (NA, length( ape))
     
     points[ ape <= 0.05] <- 2.0
@@ -73,12 +46,12 @@ points <- function(ape) {
 }
 
 #
-# Logs the total score and percentage of possible from a scored data set.
+# counts the number of predictions with an APE between 
+# lower and upper
 #
-logScore <- function(atm, scored) {
-    score <- sum (scored$score)
-    possible.score <- nrow (scored) * 2
-    perc <- (score/possible.score) * 100
-    loginfo ("%s --> %.1f points or %.1f%% of points available", atm, score, perc)
+ape.between <- function(usage, usage.hat, lower, upper) {
+    apes <- ape(usage, usage.hat)
+    sum (apes <= upper & apes > lower)
 }
+
 
