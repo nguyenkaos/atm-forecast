@@ -14,7 +14,8 @@ onError <- function (e) {
 # set with all features, along with the prediction and scoring
 # metrics.  
 #
-trainAndPredict <- function (by, data, method, split.at, default, cache.prefix, formula = usage ~ ., ...) {
+trainAndPredict <- function (by, data, method, split.at, default.tune, cache.prefix, 
+                             formula = usage ~ ., default.predict = 0.0, ...) {
     by <- by[[1]]
     loginfo("Training group '%s' split at '%s' with '%s' obs.", by, split.at, nrow(data))
     
@@ -22,10 +23,10 @@ trainAndPredict <- function (by, data, method, split.at, default, cache.prefix, 
     fit <- cache (cacheAs, {
         
         # train the predictive model
-        trainer (data, method, split.at, formula, default, ...)
+        trainer (data, method, split.at, formula, default.tune, ...)
     })
     
-    prediction <- -2
+    prediction <- default.predict 
     if (!is.null (fit)) {
         
         # make a prediction based on the fitted model
@@ -38,7 +39,7 @@ trainAndPredict <- function (by, data, method, split.at, default, cache.prefix, 
 #
 # Trains a subset of data.
 #
-trainer <- function (data, method, split.at, formula, default,  ...) {
+trainer <- function (data, method, split.at, formula, default.tune,  ...) {
     fit <- NULL
     
     train <- subset (data, trandate < split.at)
@@ -57,7 +58,7 @@ trainer <- function (data, method, split.at, formula, default,  ...) {
         if (is.null (fit)) {
             warning ("could not find tuning parameters!", immediate. = T)
             tryCatch ( 
-                fit <- train (formula, data=train, method=method, tuneGrid=default, ...), 
+                fit <- train (formula, data = train, method = method, tuneGrid = default.tune, ...), 
                 error = onError
             )      
         }  

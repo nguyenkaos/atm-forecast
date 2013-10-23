@@ -78,18 +78,19 @@ challenger <- cache (challenger.cache, {
             usage.hat = trainAndPredict (
                 .BY, 
                 .SD, 
-                method       = "gbm",
-                split.at     = as.Date (opts$splitAt), 
-                cache.prefix = fit.cache,
-                #formula      = usage ~ ., # - I(atm) - I(holiday) - I(payday),
+                method          = "gbm",
+                split.at        = as.Date (opts$splitAt), 
+                cache.prefix    = fit.cache,
+                default.predict = 0.0,
+                #formula        = usage ~ ., # - I(atm) - I(holiday) - I(payday),
                 
                 # parameters specific to the training method
-                verbose      = FALSE, 
-                distribution = "poisson",
-                keep.data    = FALSE,
-                default      = expand.grid ( .n.trees = 100, 
-                                             .shrinkage = 0.1,
-                                             .interaction.depth = 2))
+                verbose         = FALSE, 
+                distribution    = "poisson",
+                keep.data       = FALSE,
+                default.tune    = expand.grid ( .n.trees = 100, 
+                                                .shrinkage = 0.1,
+                                                .interaction.depth = 2))
         ),
         
         # training occurs independently for each ATM
@@ -138,8 +139,6 @@ if (opts$verbose) {
     export.file <- sprintf("deposit-daily-%s.csv", today())
     write.csv(scores.daily, export.file, row.names = FALSE)
     loginfo("exporting daily scores to '%s'", export.file)
-    
-    # TODO - DEFECT - each model working with difference usage actuals!
 }
 
 # should the forecast be exported?
@@ -162,7 +161,7 @@ if(opts$export) {
 
 # create a summary of the differences between champion and challenger
 models.all.summary <- models.all [, list (
-    points       = sum (points (usage, usage.hat)),
+    points       = sum (points (usage, usage.hat), na.rm = T),
     mape         = mape (usage, usage.hat),
     mse          = mse (usage, usage.hat),
     rmse         = rmse (usage, usage.hat),
