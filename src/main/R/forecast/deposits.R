@@ -130,9 +130,7 @@ if (opts$verbose) {
             usage.hat,
             model,
             points       = points (usage, usage.hat),
-            mape         = mape (usage, usage.hat),
-            mse          = mse (usage, usage.hat),
-            rmse         = rmse (usage, usage.hat)
+            ape          = ape (usage, usage.hat)
         ), by = list(atm, trandate)]
     
     # export the daily scores of both models
@@ -161,7 +159,7 @@ if(opts$export) {
 
 # create a summary of the differences between champion and challenger
 models.all.summary <- models.all [, list (
-    points       = sum (points (usage, usage.hat), na.rm = T),
+    points       = sum (points (usage, usage.hat)),
     mape         = mape (usage, usage.hat),
     mse          = mse (usage, usage.hat),
     rmse         = rmse (usage, usage.hat),
