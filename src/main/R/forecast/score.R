@@ -35,12 +35,20 @@ points <- function(actual, predict) {
 # Calculates the number of competition points awarded based on the ape.
 #
 points.ape <- function(ape) {
-    points <- rep (NA, length( ape))
+    points <- rep (NA, length (ape))
     
+    # within 5% gets 2 points
     points[ ape <= 0.05] <- 2.0
+    
+    # within 10% gets 1 point
     points[ ape <= 0.10 & ape > 0.05] <- 1.0
+    
+    # within 20% gets 0.5 points
     points[ ape <= 0.20 & ape > 0.10] <- 0.5
+    
+    # anything else gets ya' nothing
     points[ ape > 0.20] <- 0.0
+    points[ is.na(ape)] <- 0.0
     
     return(points)
 }
@@ -51,7 +59,7 @@ points.ape <- function(ape) {
 #
 ape.between <- function(usage, usage.hat, lower, upper) {
     apes <- ape(usage, usage.hat)
-    sum (apes <= upper & apes > lower)
+    sum (apes <= upper & apes > lower, na.rm = TRUE)
 }
 
 
