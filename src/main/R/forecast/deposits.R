@@ -161,6 +161,7 @@ model.compare.summary <- models [, list (
     total.obs    = length (usage),
     total.atm    = length (unique (atm))
 ), by = list(model, month(trandate)) ]
+write.csv(model.compare.summary, sprintf("model-comparison-%s.csv", today()), row.names = T)
 
 # should the forecast be exported?
 if(opts$export) {
