@@ -55,92 +55,151 @@ source("score.R")
 
 # initialization
 basicConfig (level = loglevels [opts$logLevel])
+data.id <- basename.only (opts$historyFile)
 
-deposits.cache <- sprintf("%s-features", basename.only (opts$historyFile))
-deposits <- cache (deposits.cache, {
+#
+# create the feature set
+#
+features <- function() {
     
-    # fetch and clean the input data
-    fetch( history.file = opts$historyFile,
-           forecast.to  = today() + opts$forecastOut,
-           data.dir     = opts$dataDir)
-})
-
-challenger.cache <- sprintf ("%s-challenger", basename.only (opts$historyFile))
-challenger <- cache (challenger.cache, {
-    
-    # train and fit a model
-    fit.cache <- sprintf ("%s-fit", basename.only (opts$historyFile))
-    deposits[ 
-        # include only those ATMs that pass the 'subset' expression (optional)
-        eval (parse (text = opts$subset)), 
-        `:=` (
-            model = "challenger",
-            usage.hat = trainAndPredict (
-                .BY, 
-                .SD, 
-                method          = "gbm",
-                split.at        = as.Date (opts$splitAt), 
-                cache.prefix    = fit.cache,
-                default.predict = 0.0,
-                #formula        = usage ~ ., # - I(atm) - I(holiday) - I(payday),
-                
-                # parameters specific to the training method
-                verbose         = FALSE, 
-                distribution    = "poisson",
-                keep.data       = FALSE,
-                default.tune    = expand.grid ( .n.trees = 100, 
-                                                .shrinkage = 0.1,
-                                                .interaction.depth = 2))
-        ),
+    deposits.cache <- sprintf("%s-features", data.id)
+    deposits <- cache (deposits.cache, {
         
-        # training occurs independently for each ATM
-        by = atm] 
-})
+        # how far out should we forecast?
+        forecast.to = today() + opts$forecastOut
+        
+        # fetch usage history
+        deposits <- fetch (history.file = opts$historyFile,
+                           forecast.to  = forecast.to,
+                           data.dir     = opts$dataDir)
+        
+        # generate the feature set
+        dates (deposits)
+        paydays (deposits, forecast.to)
+        holidays (deposits, forecast.to,)
+        localTrends (deposits)  
+        #globalTrends (deposits)
+        
+        # validate the feature set
+        validate (deposits)
+        deposits
+    })
+}
 
-# compare the champion and challenger models; the test period is August
-compare.start <- "2013-07-31"
-compare.end <- "2013-09-01"
-champion.file <- "../../resources/deposits-champion.rds"
+#
+# train a challenger model
+#
+challenger <- function (features) {
+    
+    challenger.cache <- sprintf ("%s-challenger", data.id)
+    challenger <- cache (challenger.cache, {
+        
+        features[ 
+            # include only those ATMs that pass the 'subset' expression (optional)
+            eval (parse (text = opts$subset)), 
+            
+            # train and fit a model
+            `:=` (
+                model = "challenger",
+                usage.hat = trainAndPredict (
+                    .BY, 
+                    .SD, 
+                    split.at        = as.Date (opts$splitAt), 
+                    cache.prefix    = data.id,
+                    
+                    # define how the model will be tuned
+                    train.control   = trainControl ( 
+                        method        = "repeatedcv", 
+                        number        = 5,
+                        returnData    = FALSE,
+                        allowParallel = TRUE ),
+                    
+                    # what are we trying to predict?
+                    formula         = usage ~ .,
+                    default.predict = 0.0,
+                    
+                    # parameters specific to the training method
+                    method          = "gbm",
+                    preProcess      = c("center", "scale"),
+                    verbose         = FALSE, 
+                    distribution    = "poisson",
+                    keep.data       = FALSE,
+                    default.tune    = expand.grid ( .n.trees = 100, 
+                                                    .shrinkage = 0.1,
+                                                    .interaction.depth = 2))
+            ),
+            
+            # training occurs independently for each ATM
+            by = atm ] 
+    })
+}
 
-# fetch current champion's forecast over the same set of ATM/dates as challenger
-champion <- readRDS(champion.file)
-champion <- champion [ 
-    deposits[ trandate > compare.start & trandate < compare.end],
-    list (
-        usage,
-        usage.hat,
-        model = "champion"
-    )] 
+#
+# fetch the current champion model
+#
+champion <- function (features, champion.file = "../../resources/deposits-champion.rds") {
+    
+    # fetch current champion's forecast 
+    champion <- readRDS(champion.file)
+    
+    # we are only interested in those atm-days in the feature set
+    champion <- champion [ 
+        features[ trandate > compare.start & trandate < compare.end],
+        list (
+            usage,
+            usage.hat,
+            model = "champion"
+        )] 
+    
+    # TEMP - rewrite any usage.hat NA's as 0 for now.  not sure why this is.
+    champion [is.na(usage.hat), usage.hat := 0, ]
+}
 
-# clean-up the challenger data
-challenger <- challenger [
-    trandate > compare.start & trandate < compare.end, 
-    colnames(champion), 
-    with = FALSE]
+#
+# compare the champion and challenger models
+#
+compare <- function(champion, challenger) {
+        
+    # clean-up the challenger data
+    challenger <- challenger [
+        trandate > compare.start & trandate < compare.end, 
+        colnames(champion), 
+        with = FALSE]
+    
+    # combine each into a single data set for further comparison
+    models <- rbindlist (list (champion, challenger))
+    setkeyv (models, c("model", "atm", "trandate"))
+    
+    return(models)
+}
 
-# combine each into a single data set for further comparison
-models.all <- rbindlist (list (champion, challenger))
-
-if (opts$verbose) {
+#
+# generate a detailed score for each atm-day
+#
+score <- function (models) {
     
     # score each atm-day for the champion and challenger
-    scores.daily <- models.all [
+    scores.daily <- models [
         , list (
             usage,
             usage.hat,
             model,
-            points       = points (usage, usage.hat),
-            ape          = ape (usage, usage.hat)
+            abs.err    = abs(usage - usage.hat),
+            ape        = ape (usage, usage.hat),
+            rmse       = rmse (usage, usage.hat),
+            points     = points (usage, usage.hat)
         ), by = list(atm, trandate)]
     
     # export the daily scores of both models
-    export.file <- sprintf("deposit-daily-%s.csv", today())
+    export.file <- sprintf("%s-details-%s.csv", data.id, today())
     write.csv(scores.daily, export.file, row.names = FALSE)
-    loginfo("exporting daily scores to '%s'", export.file)
+    loginfo("daily scores exported to '%s'", export.file)
 }
 
-# should the forecast be exported?
-if(opts$export) {
+#
+# export the challenger's forecast 
+#
+export <- function (challenger) {
     
     # extract the forecast
     forecast <- challenger [
@@ -152,26 +211,60 @@ if(opts$export) {
         ), ]
     
     # export the forecast to a csv file
-    filename <- sprintf("deposit-forecast-%s.csv", today())
+    filename <- sprintf("%s-forecast-%s.csv", data.id, today())
     write.csv(forecast, filename)
-    loginfo("forecasting exported to %s", filename)
+    loginfo("forecast exported to %s", filename)
 }
 
-# create a summary of the differences between champion and challenger
-models.all.summary <- models.all [, list (
-    points       = sum (points (usage, usage.hat)),
-    mape         = mape (usage, usage.hat),
-    mse          = mse (usage, usage.hat),
-    rmse         = rmse (usage, usage.hat),
-    under.05.ape = ape.between(usage, usage.hat, 0.00, 0.05),
-    under.10.ape = ape.between(usage, usage.hat, 0.05, 0.10),
-    under.20.ape = ape.between(usage, usage.hat, 0.10, 0.20),
-    over.20.ape  = ape.between(usage, usage.hat, 0.20, Inf),
-    total.obs    = length (usage),
-    total.atm    = length (unique (atm))
-), by = list(model, month(trandate)) ]
+#
+# summarize the differences between champion and challenger
+#
+summary <- function (models) {
+    
+    # create a summary of the differences between champion and challenger
+    models.summary <- models [, list (
+        err.total     = sum(usage) - sum(usage.hat),
+        err.abs       = sum (abs (usage - usage.hat)),
+        mape          = mape (usage, usage.hat),
+        rmse          = rmse (usage, usage.hat),
+        points        = sum (points (usage, usage.hat)),
+        under.05.ape  = ape.between (usage, usage.hat, 0.00, 0.05),
+        under.10.ape  = ape.between (usage, usage.hat, 0.05, 0.10),
+        under.20.ape  = ape.between (usage, usage.hat, 0.10, 0.20),
+        over.20.ape   = ape.between (usage, usage.hat, 0.20, Inf),
+        total.obs     = length (usage),
+        total.atm     = length (unique (atm))
+    ), by = list (model, month (trandate)) ]
+    
+    # export the summary
+    export.file <- sprintf("%s-summary-%s.csv", data.id, today())
+    write.csv(models.summary, export.file, row.names = FALSE)
+    loginfo("summary exported to '%s'", export.file)
+    models.summary[]
+}
 
-# export the summary
-write.csv(models.all.summary, sprintf("deposit-summary-%s.csv", today()), row.names = T)
-models.all.summary[]
+#
+# main() effectively starts here
+#
+
+# generate the feature set
+f <- features()
+
+# the test period for comparison is August
+compare.start <- "2013-07-31"
+compare.end <- "2013-09-01"
+
+# compare the champion and challenger models
+models <- compare( champion(f), challenger (f))
+summary (models)
+
+# should a detailed score be produced?
+if (opts$verbose) {
+    score (models)        
+}
+
+# should the forecast be exported?
+if (opts$export) {
+    export (challenger)
+}
 
