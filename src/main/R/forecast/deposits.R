@@ -159,7 +159,7 @@ champion <- function (features, champion.file = "../../resources/deposits-champi
 # compare the champion and challenger models
 #
 compare <- function(champion, challenger) {
-        
+    
     # clean-up the challenger data
     challenger <- challenger [
         trandate > compare.start & trandate < compare.end, 
@@ -184,7 +184,7 @@ score <- function (models) {
             usage,
             usage.hat,
             model,
-            abs.err    = abs(usage - usage.hat),
+            err.abs    = abs(usage - usage.hat),
             ape        = ape (usage, usage.hat),
             rmse       = rmse (usage, usage.hat),
             points     = points (usage, usage.hat)
@@ -201,20 +201,21 @@ score <- function (models) {
 #
 summary <- function (models) {
     
-    # create a summary of the differences between champion and challenger
-    models.summary <- models [, list (
-        err.total = sum(usage) - sum(usage.hat),
-        err.abs   = sum (abs (usage - usage.hat)),
-        mape      = mape (usage, usage.hat),
-        rmse      = rmse (usage, usage.hat),
-        points    = sum (points (usage, usage.hat)),
-        u05.ape   = between (ape (usage, usage.hat), 0.00, 0.05),
-        u10.ape   = between (ape (usage, usage.hat), 0.05, 0.10),
-        u20.ape   = between (ape (usage, usage.hat), 0.10, 0.20),
-        over.ape  = between (ape (usage, usage.hat), 0.20, Inf),
-        total.obs = length (usage),
-        total.atm = length (unique (atm))
-    ), by = list (model, month (trandate)) ]
+    # create a summary of the differences between the models
+    models.summary <- models [
+        , list (
+            err.total = sum(usage) - sum(usage.hat),
+            err.abs   = sum (abs (usage - usage.hat)),
+            mape      = mape (usage, usage.hat),
+            rmse      = rmse (usage, usage.hat),
+            points    = sum (points (usage, usage.hat)),
+            u05.ape   = between (ape (usage, usage.hat), 0.00, 0.05),
+            u10.ape   = between (ape (usage, usage.hat), 0.05, 0.10),
+            u20.ape   = between (ape (usage, usage.hat), 0.10, 0.20),
+            over.ape  = between (ape (usage, usage.hat), 0.20, Inf),
+            total.obs = length (usage),
+            total.atm = length (unique (atm))
+        ), by = list (model, month (trandate)) ]
     
     # export the summary
     export.file <- sprintf("%s-summary-%s.csv", data.id, today())
@@ -247,12 +248,12 @@ export <- function (challenger) {
 # main() effectively starts here
 #
 
-# generate the feature set
-f <- features()
-
 # the test period for comparison is August
 compare.start <- "2013-07-31"
 compare.end <- "2013-09-01"
+
+# generate the feature set
+f <- features()
 
 # compare the champion and challenger models
 models <- compare( champion(f), challenger (f))
