@@ -197,26 +197,6 @@ score <- function (models) {
 }
 
 #
-# export the challenger's forecast 
-#
-export <- function (challenger) {
-    
-    # extract the forecast
-    forecast <- challenger [
-        trandate >= today(), 
-        list (
-            atm       = atm, 
-            trandate  = trandate,
-            usage.hat = round(usage.hat)
-        ), ]
-    
-    # export the forecast to a csv file
-    filename <- sprintf("%s-forecast-%s.csv", data.id, today())
-    write.csv(forecast, filename)
-    loginfo("forecast exported to %s", filename)
-}
-
-#
 # summarize the differences between champion and challenger
 #
 summary <- function (models) {
@@ -241,6 +221,26 @@ summary <- function (models) {
     write.csv(models.summary, export.file, row.names = FALSE)
     loginfo("summary exported to '%s'", export.file)
     models.summary[]
+}
+
+#
+# export the challenger's forecast 
+#
+export <- function (challenger) {
+    
+    # extract the forecast
+    forecast <- challenger [
+        trandate >= today(), 
+        list (
+            atm       = atm, 
+            trandate  = trandate,
+            usage.hat = round(usage.hat)
+        ), ]
+    
+    # export the forecast to a csv file
+    filename <- sprintf("%s-forecast-%s.csv", data.id, today())
+    write.csv(forecast, filename)
+    loginfo("forecast exported to %s", filename)
 }
 
 #
