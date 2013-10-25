@@ -9,14 +9,7 @@ library("data.table")
 as.ts <- function(history) {
     
     # tranform the 'long' history to a 'wide' time series
-    history.ts <- dlply( history, 
-                         "atm", 
-                         function(byAtm) { 
-                             rev(as.vector(byAtm$usage)) 
-                         }, 
-                         .progress = "text")
-    
-    # time series will be of different lengths; need most recent data 
-    # first to allow ATMs with different life spans to be compared
-    history.dt <- data.table(atm = names(history.ts), time.series = I(history.ts), key="atm")
+    history [, list(
+        time.series = list( rev ( usage [!is.na (usage)]))
+    ), by = atm ]
 }
