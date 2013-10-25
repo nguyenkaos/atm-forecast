@@ -57,9 +57,8 @@ points.ape <- function(ape) {
 # counts the number of predictions with an APE between 
 # lower and upper
 #
-ape.between <- function(usage, usage.hat, lower, upper) {
-    apes <- ape(usage, usage.hat)
-    sum (apes <= upper & apes > lower, na.rm = TRUE)
+between <- function(values, lower, upper) {
+    sum (values <= upper & values > lower, na.rm = TRUE)
 }
 
 

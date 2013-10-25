@@ -223,17 +223,17 @@ summary <- function (models) {
     
     # create a summary of the differences between champion and challenger
     models.summary <- models [, list (
-        err.total     = sum(usage) - sum(usage.hat),
-        err.abs       = sum (abs (usage - usage.hat)),
-        mape          = mape (usage, usage.hat),
-        rmse          = rmse (usage, usage.hat),
-        points        = sum (points (usage, usage.hat)),
-        under.05.ape  = ape.between (usage, usage.hat, 0.00, 0.05),
-        under.10.ape  = ape.between (usage, usage.hat, 0.05, 0.10),
-        under.20.ape  = ape.between (usage, usage.hat, 0.10, 0.20),
-        over.20.ape   = ape.between (usage, usage.hat, 0.20, Inf),
-        total.obs     = length (usage),
-        total.atm     = length (unique (atm))
+        err.total = sum(usage) - sum(usage.hat),
+        err.abs   = sum (abs (usage - usage.hat)),
+        mape      = mape (usage, usage.hat),
+        rmse      = rmse (usage, usage.hat),
+        points    = sum (points (usage, usage.hat)),
+        u05.ape   = between (ape (usage, usage.hat), 0.00, 0.05),
+        u10.ape   = between (ape (usage, usage.hat), 0.05, 0.10),
+        u20.ape   = between (ape (usage, usage.hat), 0.10, 0.20),
+        over.ape  = between (ape (usage, usage.hat), 0.20, Inf),
+        total.obs = length (usage),
+        total.atm = length (unique (atm))
     ), by = list (model, month (trandate)) ]
     
     # export the summary
