@@ -199,7 +199,7 @@ score <- function (models) {
 #
 # summarize the differences between champion and challenger
 #
-summary <- function (models) {
+summarize <- function (models) {
     
     # create a summary of the differences between the models
     models.summary <- models [
@@ -221,7 +221,8 @@ summary <- function (models) {
     export.file <- sprintf("%s-summary-%s.csv", data.id, today())
     write.csv(models.summary, export.file, row.names = FALSE)
     loginfo("summary exported to '%s'", export.file)
-    models.summary[]
+    
+    print (models.summary)
 }
 
 #
@@ -257,7 +258,7 @@ f <- features()
 
 # compare the champion and challenger models
 models <- compare( champion(f), challenger (f))
-summary (models)
+summarize (models)
 
 # should a detailed score be produced?
 if (opts$verbose) {
