@@ -89,18 +89,18 @@ dates <- function (features) {
     
     # add date related features
     features[, `:=`(
-        atm = ordered( atm),
-        trandate = as.Date (trandate, format="%m/%d/%Y"),
-        trandate.n = as.integer (trandate),
-        quarter = quarter (trandate),
-        month.of.year = month (trandate),
-        day.of.year = yday (trandate),
+        atm              = ordered( atm),
+        trandate         = as.Date (trandate, format="%m/%d/%Y"),
+        trandate.n       = as.integer (trandate),
+        quarter          = quarter (trandate),
+        month.of.year    = month (trandate),
+        day.of.year      = yday (trandate),
         day.of.semi.year = yday (trandate) %% 182,
-        day.of.quarter = yday (trandate) %% 91,
-        day.of.month = mday (trandate),
-        day.of.week = wday (trandate),
-        week.of.year = week (trandate),
-        week.of.month = week (trandate) - week (floor_date (trandate, "month"))
+        day.of.quarter   = yday (trandate) %% 91,
+        day.of.month     = mday (trandate),
+        day.of.week      = wday (trandate),
+        week.of.year     = week (trandate),
+        week.of.month    = week (trandate) - week (floor_date (trandate, "month"))
     ),]
 }
 
@@ -130,8 +130,8 @@ holidays <- function (features,
     features[holidays, holiday := holiday]
     features[is.na(holiday), holiday := "none"]
     features[,`:=`(
-        holiday = as.factor(holiday),
-        holiday.n = as.numeric(as.factor(holiday))
+        holiday.n = as.numeric(as.factor(holiday)),
+        holiday = NULL
     )]
 }
 
@@ -160,17 +160,17 @@ paydays <- function (features,
         stop (sprintf ("unable to forecast; paydays data only found up to %s", paydays.max))
     
     # collapse multiple pay/pre/post days into a single row for each (atm,date)
-    paydays <- paydays[, list (
-        payday = paste(unique(payday), collapse="+")
-    ), by="trandate"]
+    paydays <- paydays [, list (
+        payday = paste (unique (payday), collapse="+")
+    ), by = "trandate"]
     
     # add the paydays data to the rest of the features
-    setkeyv(features, c("trandate", "atm"))
-    features[paydays, payday := payday]
-    features[is.na(payday), payday := "none"]
-    features[, `:=` (
-        payday = as.factor(payday),
-        payday.n = as.numeric(as.factor(payday))
+    setkeyv (features, c("trandate", "atm"))
+    features [paydays, payday := payday]
+    features [is.na(payday), payday := "none"]
+    features [, `:=` (
+        payday.n = as.numeric (as.factor (payday)),
+        payday = NULL
     )]
 }
 

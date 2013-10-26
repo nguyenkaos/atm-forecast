@@ -60,28 +60,28 @@ data.id <- basename.only (opts$historyFile)
 #
 # create the feature set
 #
-features <- function() {
+features <- function (history.file = opts$historyFile,
+                      data.dir     = opts$dataDir, 
+                      forecast.out = opts$forecastOut) {
     
-    deposits.cache <- sprintf("%s-features", data.id)
+    deposits.cache <- sprintf("%s-features", basename.only(history.file))
     deposits <- cache (deposits.cache, {
         
         # how far out should we forecast?
-        forecast.to = today() + opts$forecastOut
+        forecast.to = today() + forecast.out
         
         # fetch usage history
-        deposits <- fetch (history.file = opts$historyFile,
-                           forecast.to  = forecast.to,
-                           data.dir     = opts$dataDir)
+        deposits <- fetch (history.file, forecast.to, data.dir)
         
         # generate the feature set
         dates (deposits)
         paydays (deposits, forecast.to)
         holidays (deposits, forecast.to,)
         localTrends (deposits)  
-        #globalTrends (deposits)
+        globalTrends (deposits)
         
         # validate the feature set
-        validate (deposits)
+        #validate (deposits)
         deposits
     })
 }
@@ -111,6 +111,7 @@ challenger <- function (features) {
                     train.control   = trainControl ( 
                         method        = "repeatedcv", 
                         number        = 5,
+                        repeats       = 1,
                         returnData    = FALSE,
                         allowParallel = TRUE ),
                     
@@ -137,14 +138,17 @@ challenger <- function (features) {
 #
 # fetch the current champion model
 #
-champion <- function (features, champion.file = "../../resources/deposits-champion.rds") {
+champion <- function (feature.set, champion.file = "../../resources/deposits-champion.rds") {
     
     # fetch current champion's forecast 
     champion <- readRDS(champion.file)
     
+    # TODO not sure this what i need
+    setkeyv(feature.set, c("atm", "trandate"))
+    
     # we are only interested in those atm-days in the feature set
     champion <- champion [ 
-        features[ trandate > compare.start & trandate < compare.end],
+        feature.set[ trandate > compare.start & trandate < compare.end],
         list (
             usage,
             usage.hat,
@@ -159,7 +163,7 @@ champion <- function (features, champion.file = "../../resources/deposits-champi
 # compare the champion and challenger models
 #
 compare <- function(champion, challenger) {
-        
+    
     # clean-up the challenger data
     challenger <- challenger [
         trandate > compare.start & trandate < compare.end, 
@@ -184,7 +188,7 @@ score <- function (models) {
             usage,
             usage.hat,
             model,
-            abs.err    = abs(usage - usage.hat),
+            err.abs    = abs(usage - usage.hat),
             ape        = ape (usage, usage.hat),
             rmse       = rmse (usage, usage.hat),
             points     = points (usage, usage.hat)
@@ -199,28 +203,30 @@ score <- function (models) {
 #
 # summarize the differences between champion and challenger
 #
-summary <- function (models) {
+summarize <- function (models) {
     
-    # create a summary of the differences between champion and challenger
-    models.summary <- models [, list (
-        err.total = sum(usage) - sum(usage.hat),
-        err.abs   = sum (abs (usage - usage.hat)),
-        mape      = mape (usage, usage.hat),
-        rmse      = rmse (usage, usage.hat),
-        points    = sum (points (usage, usage.hat)),
-        u05.ape   = between (ape (usage, usage.hat), 0.00, 0.05),
-        u10.ape   = between (ape (usage, usage.hat), 0.05, 0.10),
-        u20.ape   = between (ape (usage, usage.hat), 0.10, 0.20),
-        over.ape  = between (ape (usage, usage.hat), 0.20, Inf),
-        total.obs = length (usage),
-        total.atm = length (unique (atm))
-    ), by = list (model, month (trandate)) ]
+    # create a summary of the differences between the models
+    models.summary <- models [
+        , list (
+            err.total = sum(usage) - sum(usage.hat),
+            err.abs   = sum (abs (usage - usage.hat)),
+            mape      = mape (usage, usage.hat),
+            rmse      = rmse (usage, usage.hat),
+            points    = sum (points (usage, usage.hat)),
+            u05.ape   = between (ape (usage, usage.hat), 0.00, 0.05),
+            u10.ape   = between (ape (usage, usage.hat), 0.05, 0.10),
+            u20.ape   = between (ape (usage, usage.hat), 0.10, 0.20),
+            over.ape  = between (ape (usage, usage.hat), 0.20, Inf),
+            total.obs = length (usage),
+            total.atm = length (unique (atm))
+        ), by = list (model, month (trandate)) ]
     
     # export the summary
     export.file <- sprintf("%s-summary-%s.csv", data.id, today())
     write.csv(models.summary, export.file, row.names = FALSE)
     loginfo("summary exported to '%s'", export.file)
-    models.summary[]
+    
+    print (models.summary)
 }
 
 #
@@ -247,16 +253,16 @@ export <- function (challenger) {
 # main() effectively starts here
 #
 
-# generate the feature set
-f <- features()
-
 # the test period for comparison is August
 compare.start <- "2013-07-31"
 compare.end <- "2013-09-01"
 
+# generate the feature set
+f <- features()
+
 # compare the champion and challenger models
 models <- compare( champion(f), challenger (f))
-summary (models)
+summarize (models)
 
 # should a detailed score be produced?
 if (opts$verbose) {
