@@ -111,6 +111,7 @@ challenger <- function (features) {
                     train.control   = trainControl ( 
                         method        = "repeatedcv", 
                         number        = 5,
+                        repeats       = 1,
                         returnData    = FALSE,
                         allowParallel = TRUE ),
                     
