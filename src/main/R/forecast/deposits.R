@@ -60,28 +60,28 @@ data.id <- basename.only (opts$historyFile)
 #
 # create the feature set
 #
-features <- function() {
+features <- function (history.file = opts$historyFile,
+                      data.dir     = opts$dataDir, 
+                      forecast.out = opts$forecastOut) {
     
-    deposits.cache <- sprintf("%s-features", data.id)
+    deposits.cache <- sprintf("%s-features", basename.only(history.file))
     deposits <- cache (deposits.cache, {
         
         # how far out should we forecast?
-        forecast.to = today() + opts$forecastOut
+        forecast.to = today() + forecast.out
         
         # fetch usage history
-        deposits <- fetch (history.file = opts$historyFile,
-                           forecast.to  = forecast.to,
-                           data.dir     = opts$dataDir)
+        deposits <- fetch (history.file, forecast.to, data.dir)
         
         # generate the feature set
         dates (deposits)
         paydays (deposits, forecast.to)
         holidays (deposits, forecast.to,)
         localTrends (deposits)  
-        #globalTrends (deposits)
+        globalTrends (deposits)
         
         # validate the feature set
-        validate (deposits)
+        #validate (deposits)
         deposits
     })
 }
