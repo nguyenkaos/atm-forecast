@@ -36,7 +36,8 @@ setup <- function(mirror=81) {
                  "Hmisc",
                  "logging",
                  "data.table",
-                 "optparse")
+                 "optparse",
+                 "Metrics")
     sapply(required, install)
     
     cat("installation successful\n")
