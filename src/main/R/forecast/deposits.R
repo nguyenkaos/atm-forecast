@@ -138,14 +138,17 @@ challenger <- function (features) {
 #
 # fetch the current champion model
 #
-champion <- function (features, champion.file = "../../resources/deposits-champion.rds") {
+champion <- function (feature.set, champion.file = "../../resources/deposits-champion.rds") {
     
     # fetch current champion's forecast 
     champion <- readRDS(champion.file)
     
+    # TODO not sure this what i need
+    setkeyv(feature.set, c("atm", "trandate"))
+    
     # we are only interested in those atm-days in the feature set
     champion <- champion [ 
-        features[ trandate > compare.start & trandate < compare.end],
+        feature.set[ trandate > compare.start & trandate < compare.end],
         list (
             usage,
             usage.hat,
