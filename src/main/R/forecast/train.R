@@ -31,38 +31,35 @@ trainAndPredict <- function (by,
     fit <- cache (sprintf ("%s-%s-%s", cache.prefix, method, by), {
         fit <- NULL
         
+        # TODO use a data.table function to split here!!
+        
         # split the training and test data
         train <- subset (data, trandate < split.at)
         if (nrow (train) > 0) {
             
-            # train the predictive model
-            tryCatch(
-                fit <- train (formula, 
-                              data      = train, 
-                              method    = method, 
-                              trControl = train.control, 
-                              ...), 
-                error = onError
-            )
+            # exclude columns with little/no variance from training
+            #preds.exclude <- names(train)[nearZeroVar (train, freqCut = 99/1)]
+            #loginfo("excluded with little variance: %s", preds.exclude)
             
-            # if parameter tuning failed, use the defaults
-            if (is.null (fit)) {
-                warning ("could not find tuning parameters!", immediate. = T)
-                tryCatch ( 
-                    fit <- train (formula, data = train, method = method, tuneGrid = default.tune, ...), 
-                    error = onError
-                )      
-            }  
+            # TODO hack - remove those with little/no variance from formula - ugly
+            #preds.orig <- attr( terms(formula), "term.labels")
+            #preds.new <- setdiff(preds.orig, preds.exclude)
+            #attr( terms(formula), "term.labels")
+            #formula <- reformulate(termlabels = preds.new, response = 'usage') 
+            
+            fit <- train (formula, 
+                          data      = train, 
+                          method    = method, 
+                          trControl = train.control, 
+                          ...)
         }
-        
-        fit
     })
     
     prediction <- default.predict 
     if (!is.null (fit)) {
         
         # make a prediction based on the fitted model
-        prediction <- predict (fit, newdata = data)
+        prediction <- round (predict (fit, newdata = data))
     }
     
     return (prediction)
