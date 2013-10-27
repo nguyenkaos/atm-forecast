@@ -28,8 +28,8 @@ getOptions <- function() {
                      default = FALSE),
         make_option (c("--verbose"),
                      help    = "The verbosity of the champion/challenger comparison [default: %default]",
-                     default = FALSE,
-                     action  = "store_true")
+                     default = TRUE,
+                     action  = "store_false")
     )
     opts <- parse_args (OptionParser (option_list = all_options))
 }
@@ -81,7 +81,7 @@ features <- function (history.file = opts$historyFile,
         globalTrends (deposits)
         
         # validate the feature set
-        #validate (deposits)
+        validate (deposits)
         deposits
     })
 }
@@ -150,19 +150,19 @@ champion <- function (feature.set, champion.file = "../../resources/deposits-cha
     champion <- champion [ 
         feature.set[ trandate > compare.start & trandate < compare.end],
         list (
+            model = "champion",
             usage,
-            usage.hat,
-            model = "champion"
+            usage.hat
         )] 
     
     # TEMP - rewrite any usage.hat NA's as 0 for now.  not sure why this is.
-    champion [is.na(usage.hat), usage.hat := 0, ]
+    #champion [is.na(usage.hat), usage.hat := 0, ]
 }
 
 #
 # compare the champion and challenger models
 #
-compare <- function(champion, challenger) {
+combine <- function(champion, challenger) {
     
     # clean-up the challenger data
     challenger <- challenger [
@@ -177,36 +177,15 @@ compare <- function(champion, challenger) {
     return(models)
 }
 
-#
-# generate a detailed score for each atm-day
-#
-score <- function (models) {
+# 
+# produces a set of scores to compare multiple models.  the 'by' argument must
+# be a quoted argument to avoid pre-mature evaluation.  if 'export.file' is
+# provided the scores will be exported as a csv.
+# 
+scoreBy <- function (models, by, export.file = NA) {
     
-    # score each atm-day for the champion and challenger
-    scores.daily <- models [
-        , list (
-            usage,
-            usage.hat,
-            model,
-            err.abs    = abs(usage - usage.hat),
-            ape        = ape (usage, usage.hat),
-            rmse       = rmse (usage, usage.hat),
-            points     = points (usage, usage.hat)
-        ), by = list(atm, trandate)]
-    
-    # export the daily scores of both models
-    export.file <- sprintf("%s-details-%s.csv", data.id, today())
-    write.csv(scores.daily, export.file, row.names = FALSE)
-    loginfo("daily scores exported to '%s'", export.file)
-}
-
-#
-# summarize the differences between champion and challenger
-#
-summarize <- function (models) {
-    
-    # create a summary of the differences between the models
-    models.summary <- models [
+    # score the models
+    scores <- models [
         , list (
             err.total = sum(usage) - sum(usage.hat),
             err.abs   = sum (abs (usage - usage.hat)),
@@ -219,14 +198,15 @@ summarize <- function (models) {
             over.ape  = between (ape (usage, usage.hat), 0.20, Inf),
             total.obs = length (usage),
             total.atm = length (unique (atm))
-        ), by = list (model, month (trandate)) ]
+        ), by = eval (by)]
     
-    # export the summary
-    export.file <- sprintf("%s-summary-%s.csv", data.id, today())
-    write.csv(models.summary, export.file, row.names = FALSE)
-    loginfo("summary exported to '%s'", export.file)
+    # export the scores
+    if (!is.na (export.file)) {
+        write.csv (scores, export.file, row.names = FALSE)
+        loginfo ("scores exported to '%s'", export.file)
+    }
     
-    print (models.summary)
+    scores
 }
 
 #
@@ -240,7 +220,7 @@ export <- function (challenger) {
         list (
             atm       = atm, 
             trandate  = trandate,
-            usage.hat = round(usage.hat)
+            usage.hat = usage.hat
         ), ]
     
     # export the forecast to a csv file
@@ -257,16 +237,27 @@ export <- function (challenger) {
 compare.start <- "2013-07-31"
 compare.end <- "2013-09-01"
 
-# generate the feature set
+# generate the features, build the champion and challenger, and combine them for scoring
 f <- features()
+models <- combine( champion(f), challenger (f))
 
-# compare the champion and challenger models
-models <- compare( champion(f), challenger (f))
-summarize (models)
+# score the models - high-level summary
+scoreBy (models,
+         by = quote (list (model, month (trandate))),
+         export.file = sprintf("%s-score-by-model.csv", data.id))
 
 # should a detailed score be produced?
 if (opts$verbose) {
-    score (models)        
+
+    # score the models by atm
+    scoreBy (models,
+             by = quote (list (model, atm)),
+             export.file = sprintf("%s-score-by-atm.csv", data.id))
+    
+    # score the models by atm-date
+    scoreBy (models, 
+             by = quote (list (model, atm, trandate)), 
+             export.file = sprintf("%s-score-by-atm-date.csv", data.id))
 }
 
 # should the forecast be exported?
