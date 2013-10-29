@@ -14,52 +14,52 @@ onError <- function (e) {
 # set with all features, along with the prediction and scoring
 # metrics.  
 #
-trainAndPredict <- function (by, 
-                             data, 
-                             method, 
+trainAndPredict <- function (formula,
+                             data,
+                             by, 
                              split.at, 
-                             cache.prefix, 
-                             default.tune,
+                             cache.prefix,
+                             default.predict,
                              train.control,
-                             formula = usage ~ ., 
-                             default.predict = 0.0, 
+                             method,
+                             x.ignore = NA,
                              ...) {
     by <- by[[1]]
-    loginfo("Training group '%s' split at '%s' with '%s' obs.", by, split.at, nrow(data))
     
-    # cache the trained model
-    fit <- cache (sprintf ("%s-%s-%s", cache.prefix, method, by), {
-        fit <- NULL
+    fit.cache <- sprintf ("%s-%s-%s", cache.prefix, method, by)
+    fit <- cache (fit.cache, {
         
-        # TODO use a data.table function to split here!!
+        # build the design matrix based on the formula (will rm any usage = NAs)
+        all <- data
+        all.x <- model.matrix (formula, all)
         
         # split the training and test data
-        train <- subset (data, trandate < split.at)
-        if (nrow (train) > 0) {
-            
-            # exclude columns with little/no variance from training
-            #preds.exclude <- names(train)[nearZeroVar (train, freqCut = 99/1)]
-            #loginfo("excluded with little variance: %s", preds.exclude)
-            
-            # TODO hack - remove those with little/no variance from formula - ugly
-            #preds.orig <- attr( terms(formula), "term.labels")
-            #preds.new <- setdiff(preds.orig, preds.exclude)
-            #attr( terms(formula), "term.labels")
-            #formula <- reformulate(termlabels = preds.new, response = 'usage') 
-            
-            fit <- train (formula, 
-                          data      = train, 
-                          method    = method, 
-                          trControl = train.control, 
-                          ...)
+        train.index <- which ( all.x[ ,"trandate"] < split.at )
+        train.x <- all.x [train.index, ]
+        train.y <- all [train.index, usage]    # TODO CANNOT ASSUME THE TARGET IS USAGE
+        
+        loginfo("%s: training with '%s' obs and '%s' features prior to '%s'.", 
+                by, nrow(train.x), ncol(train.x), split.at)
+        
+        # no shirt, no shoes, no data = no training
+        if (nrow (train.x) <= 0) {
+            return (NULL)
         }
+        
+        # remove features that have little/no variance
+        ignore <- nearZeroVar (train.x)
+        loginfo("Ignoring feature with little/no variance: %s", colnames(train.x)[ignore])
+        train.x <- subset (train.x, select = -ignore, drop = F)    
+        
+        # train the model
+        fit <- train (x = train.x, y = train.y, method = method, trControl = train.control, ...)
     })
     
+    # make prediction based on the model - predict for all test/train
     prediction <- default.predict 
     if (!is.null (fit)) {
-        
-        # make a prediction based on the fitted model
-        prediction <- round (predict (fit, newdata = data))
+        loginfo("%s: predicting for '%s' all test/train obs.", by, nrow (all.x))
+        prediction <- round (predict (fit, newdata = all.x))
     }
     
     return (prediction)
