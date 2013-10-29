@@ -65,7 +65,7 @@ data.id <- basename.only (opts$historyFile)
 # generate the features, build the champion and challengers, and combine them for scoring
 f <- buildFeatures()
 models <- combine( split.at, list (alpha (f, split.at),
-                                   #beta (f, split.at),
+                                   beta (f, split.at),
                                    champion (f, split.at)))
 
 # score by model

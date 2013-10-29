@@ -50,7 +50,7 @@ alpha <- function (features,
                 trandate,
                 usage,
                 usage.hat = trainAndPredict (
-                    formula         = usage ~ . - atm,
+                    formula         = usage ~ .,
                     data            = .SD,
                     by              = .BY, 
                     split.at        = as.Date (split.at), 
@@ -100,7 +100,7 @@ beta <- function (features,
             list (
                 trandate,
                 usage,
-                usage.hat = trainAndPredict (
+                usage.hat = trainAndPredict.experimental (
                     formula         = usage ~ .,
                     data            = .SD,
                     by              = .BY, 

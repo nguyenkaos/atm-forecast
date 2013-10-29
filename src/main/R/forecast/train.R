@@ -51,8 +51,14 @@ trainAndPredict <- function (formula,
         loginfo("Ignoring feature with little/no variance: %s", colnames(train.x)[ignore])
         train.x <- subset (train.x, select = -ignore, drop = F)    
         
+        loginfo("-----> training with %s", colnames (train.x))
+        
         # train the model
-        fit <- train (x = train.x, y = train.y, method = method, trControl = train.control, ...)
+        fit <- train (x         = train.x, 
+                      y         = train.y, 
+                      method    = method, 
+                      trControl = train.control, 
+                      ...)
     })
     
     # make prediction based on the model - predict for all test/train
@@ -60,6 +66,53 @@ trainAndPredict <- function (formula,
     if (!is.null (fit)) {
         loginfo("%s: predicting for '%s' all test/train obs.", by, nrow (all.x))
         prediction <- round (predict (fit, newdata = all.x))
+    }
+    
+    return (prediction)
+}
+
+trainAndPredict.experimental <- function (formula,
+                                          data,
+                                          by, 
+                                          split.at, 
+                                          cache.prefix,
+                                          default.predict,
+                                          train.control,
+                                          method,
+                                          x.ignore = NA,
+                                          ...) {
+    by <- by[[1]]
+    
+    fit.cache <- sprintf ("%s-%s-%s", cache.prefix, method, by)
+    fit <- cache (fit.cache, {
+        
+        train <- data [ trandate <= split.at ]
+        loginfo("%s: training with '%s' obs and '%s' features prior to '%s'.", 
+                by, nrow(train), ncol(train), split.at)
+        
+        # no shirt, no shoes, no data = no training
+        if (nrow (train) <= 0) {
+            return (NULL)
+        }
+        
+        # remove features that have little/no variance
+        #ignore <- nearZeroVar (train)
+        #loginfo("Ignoring feature with little/no variance: %s", colnames(train)[ignore])
+        #train <- subset (train, select = -ignore, drop = F)    
+        
+        # train the model
+        fit <- train (form      = formula,
+                      data      = train,
+                      method    = method, 
+                      trControl = train.control, 
+                      ...)
+    })
+    
+    # make prediction based on the model - predict for all test/train
+    prediction <- default.predict 
+    if (!is.null (fit)) {
+        loginfo("%s: predicting for '%s' all test/train obs.", by, nrow (data))
+        prediction <- round (predict (fit, newdata = data))
     }
     
     return (prediction)
