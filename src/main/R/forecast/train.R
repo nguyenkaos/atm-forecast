@@ -14,55 +14,57 @@ onError <- function (e) {
 # set with all features, along with the prediction and scoring
 # metrics.  
 #
-trainAndPredict <- function (by, 
-                             data, 
-                             method, 
+trainAndPredict <- function (formula,
+                             data,
+                             by, 
                              split.at, 
-                             cache.prefix, 
-                             default.tune,
+                             cache.prefix,
+                             default.predict,
                              train.control,
-                             formula = usage ~ ., 
-                             default.predict = 0.0, 
+                             method,
+                             x.ignore = NA,
                              ...) {
     by <- by[[1]]
-    loginfo("Training group '%s' split at '%s' with '%s' obs.", by, split.at, nrow(data))
     
-    # cache the trained model
-    fit <- cache (sprintf ("%s-%s-%s", cache.prefix, method, by), {
-        fit <- NULL
+    fit.cache <- sprintf ("%s-%s-%s", cache.prefix, method, by)
+    fit <- cache (fit.cache, {
+        
+        # build the design matrix based on the formula (will rm any usage = NAs)
+        data.x <- model.matrix (formula, data)
         
         # split the training and test data
-        train <- subset (data, trandate < split.at)
-        if (nrow (train) > 0) {
-            
-            # train the predictive model
-            tryCatch(
-                fit <- train (formula, 
-                              data      = train, 
-                              method    = method, 
-                              trControl = train.control, 
-                              ...), 
-                error = onError
-            )
-            
-            # if parameter tuning failed, use the defaults
-            if (is.null (fit)) {
-                warning ("could not find tuning parameters!", immediate. = T)
-                tryCatch ( 
-                    fit <- train (formula, data = train, method = method, tuneGrid = default.tune, ...), 
-                    error = onError
-                )      
-            }  
+        train.index <- which ( data.x[ ,"trandate"] < split.at )
+        
+        # TODO CANNOT ASSUME THE TARGET IS USAGE
+        train.x <- data.x [train.index, ]
+        train.y <- data [train.index, usage]
+        loginfo("%s: training with '%s' obs and '%s' features prior to '%s'.", 
+                by, nrow(train.x), ncol(train.x), split.at)
+        
+        # no shirt, no shoes, no data = no training
+        if (nrow (train.x) <= 0) {
+            return (NULL)
         }
         
-        fit
+        # remove features that have little/no variance
+        ignore <- nearZeroVar (train.x, 99/1)
+        loginfo("Ignoring feature with little/no variance: %s", colnames(train.x)[ignore])
+        train.x <- subset (train.x, select = -ignore, drop = F)    
+        
+        # train the model
+        fit <- train (x         = train.x, 
+                      y         = train.y, 
+                      method    = method, 
+                      trControl = train.control, 
+                      ...)
     })
     
+    # make prediction based on the model - predict for all test/train
     prediction <- default.predict 
     if (!is.null (fit)) {
-        
-        # make a prediction based on the fitted model
-        prediction <- predict (fit, newdata = data)
+        data.x <- model.matrix (formula, data)
+        loginfo("%s: predicting for '%s' all test/train obs.", by, nrow (data.x))
+        prediction <- round (predict (fit, newdata = data.x))
     }
     
     return (prediction)
