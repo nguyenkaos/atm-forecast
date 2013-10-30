@@ -105,16 +105,17 @@ export <- function (models, export.id) {
 #
 formula.to.matrix <- function(form, data) {
     m <- match.call(expand.dots = FALSE)
+    if (is.matrix(eval.parent(m$data))) 
+        m$data <- as.data.frame(data)
     m$... <- m$contrasts <- NULL
     m[[1]] <- as.name("model.frame")
     m <- eval.parent(m)
-    x <- model.matrix(attr(m, "terms"), m, contrasts, na.action = na.fail)
-    
-    # handle the intercept term
+    Terms <- attr(m, "terms")
+    x <- model.matrix(Terms, m, contrasts, na.action = na.action)
+    cons <- attr(x, "contrast")
     xint <- match("(Intercept)", colnames(x), nomatch = 0)
     if (xint > 0) 
         x <- x[, -xint, drop = FALSE]
-    
     y <- model.response(m)
     list(y = y, x = x)
 }
