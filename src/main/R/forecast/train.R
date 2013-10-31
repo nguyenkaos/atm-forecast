@@ -31,6 +31,18 @@ trainAndPredict <- function (formula,
         
         # build the design matrix based on the formula (will rm any usage = NAs)
         data.x <- model.matrix (formula, data)
+
+        # remove features that have little/no variance
+        #
+        # TODO - ignore these columns significantly reduces the score.  but ultimately
+        # in my tests it is ignore mostly the "global trends." if I comment out this
+        # code, but turn off the generate of the "global trends" the score is much higher.
+        # this must indicate that my implementation of this code is not correct and is
+        # negatively impacting the score.
+        #
+        #ignore <- nearZeroVar (data.x, 99/1)
+        #loginfo("Ignoring feature with little/no variance: %s", colnames(data.x)[ignore])
+        #data.x <- subset (data.x, select = -ignore, drop = F)   
         
         # split the training and test data
         train.index <- which ( data.x[ ,"trandate"] < split.at )
@@ -45,11 +57,6 @@ trainAndPredict <- function (formula,
         if (nrow (train.x) <= 0) {
             return (NULL)
         }
-        
-        # remove features that have little/no variance
-        ignore <- nearZeroVar (train.x, 99/1)
-        loginfo("Ignoring feature with little/no variance: %s", colnames(train.x)[ignore])
-        train.x <- subset (train.x, select = -ignore, drop = F)    
         
         # train the model
         fit <- train (x         = train.x, 
