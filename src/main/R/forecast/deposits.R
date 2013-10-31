@@ -57,7 +57,7 @@ source("deposits-common.R")
 source("deposits-challengers.R")
 
 # initialization
-options (warn = 1)
+options (warn = 0)
 basicConfig (level = loglevels [opts$logLevel])
 split.at <- opts$splitAt
 data.id <- basename.only (opts$historyFile)
@@ -65,13 +65,14 @@ data.id <- basename.only (opts$historyFile)
 # generate the features, build the champion and challengers, and combine them for scoring
 f <- buildFeatures()
 models <- combine( split.at, list (alpha (f, split.at),
-                                   beta (f, split.at),
                                    champion (f, split.at)))
 
 # score by model
 models <- models [is.finite(usage)]
 scoreBy (models,
-         by = quote (list (model)),
+         by          = quote (list (model)),
+         min.date    = "2013-09-01",
+         max.date    = "2013-09-30",
          export.file = sprintf("%s-score-by-model.csv", data.id))
 
 # should a detailed score be produced?
@@ -79,12 +80,16 @@ if (opts$verbose) {
     
     # score the models by atm
     scoreBy (models,
-             by = quote (list (model, atm)),
+             by          = quote (list (model, atm)),
+             min.date    = "2013-09-01",
+             max.date    = "2013-09-30",
              export.file = sprintf("%s-score-by-atm.csv", data.id))
     
     # score the models by atm-date
     scoreBy (models, 
-             by = quote (list (model, atm, trandate)), 
+             by          = quote (list (model, atm, trandate)), 
+             min.date    = "2013-09-01",
+             max.date    = "2013-09-30",
              export.file = sprintf("%s-score-by-atm-date.csv", data.id))
 }
 
