@@ -17,12 +17,12 @@ cache <- function (cache.name,
     
     # has the result already been cached?
     if (file.exists (cache.file) && !cache.ignore) {
-        loginfo ("Found '%s' cached as '%s'", cache.name, cache.file)
+        logdebug ("Found '%s' cached as '%s'", cache.name, cache.file)
         result <- readRDS(cache.file)
         
     } else {
         # eval the expression 
-        loginfo ("'%s' has NOT been cached or is being ignored", cache.name)
+        logdebug ("'%s' has NOT been cached or is being ignored", cache.name)
         result <- eval(expr)
         
         # sanity check, just in case
@@ -33,7 +33,7 @@ cache <- function (cache.name,
         dir.create (path = cache.dir, showWarnings = FALSE)
         
         # cache the result
-        loginfo ("Cacheing '%s' as '%s'", cache.name, cache.file)
+        logdebug ("Cacheing '%s' as '%s'", cache.name, cache.file)
         saveRDS (result, cache.file, compress = cache.compress)
     }
     

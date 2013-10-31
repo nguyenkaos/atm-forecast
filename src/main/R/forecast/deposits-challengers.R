@@ -10,7 +10,7 @@ champion <- function (features,
     
     # we are only interested in those atm-days in the feature set
     champion <- champion [ 
-        features [ trandate > split.at & is.finite(usage) ],
+        features [ trandate > as.Date(split.at) & is.finite(usage) ],
         list (
             usage,
             usage.hat,
