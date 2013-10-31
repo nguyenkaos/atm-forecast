@@ -19,7 +19,7 @@ buildFeatures <- function (history.file = opts$historyFile,
         paydays (deposits, forecast.to)
         holidays (deposits, forecast.to,)
         localTrends (deposits)  
-        globalTrends (deposits)
+        #globalTrends (deposits)
         
         # validate the feature set
         validate (deposits)
@@ -79,11 +79,11 @@ scoreBy <- function (models, by, export.file = NA, min.date = -Inf, max.date = I
 #
 # export each of the challenger's forecast to a CSV.
 #
-export <- function (models, export.id) {
+export <- function (models, export.id, min.date = -Inf, max.date = Inf) {
     
     # export the forecast for each model
     forecast <- models [
-        trandate >= today(), 
+        trandate >= min.date & trandate <= max.date, 
         list (
             atm       = atm, 
             trandate  = trandate,

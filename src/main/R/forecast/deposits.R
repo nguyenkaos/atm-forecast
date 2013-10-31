@@ -90,6 +90,6 @@ if (opts$verbose) {
 
 # should the forecast be exported?
 if (opts$export) {
-    export (models, data.id)
+    export (models, data.id, min.date = today())
 }
 
