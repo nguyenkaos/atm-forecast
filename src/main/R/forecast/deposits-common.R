@@ -19,7 +19,8 @@ buildFeatures <- function (history.file = opts$historyFile,
         paydays (deposits, forecast.to)
         holidays (deposits, forecast.to,)
         localTrends (deposits)  
-        #globalTrends (deposits)
+        globalTrends (deposits)
+        lags (deposits)
         
         # validate the feature set
         validate (deposits)
