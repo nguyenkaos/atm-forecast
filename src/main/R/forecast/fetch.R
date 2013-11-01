@@ -174,6 +174,7 @@ paydays <- function (features,
 socialSecurity <- function (features, 
                             ss.file = "social-security.csv",
                             data.dir = "../../resources") {
+    loginfo("creating social security payment features")
     
     # read the social security data
     ss.path <- sprintf ("%s/%s", data.dir, ss.file)
