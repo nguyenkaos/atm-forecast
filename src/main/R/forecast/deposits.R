@@ -46,15 +46,17 @@ library("lubridate")
 library("logging")
 library("foreach")
 library("Metrics")
+library("caretEnsemble")
+#library("devtools")
+#install_github('caretEnsemble', 'zachmayer')
 
 # other project sources
 source("../common/cache.R")
 source("../common/utils.R")
 source("fetch.R")
-source("train.R")
 source("score.R")
 source("deposits-common.R")
-source("deposits-challengers.R")
+source("deposits-models.R")
 
 # initialization
 options (warn = 0)
@@ -64,8 +66,8 @@ data.id <- basename.only (opts$historyFile)
 
 # generate the features, build the champion and challengers, and combine them for scoring
 f <- buildFeatures()
-models <- combine( split.at, list (alpha (f, split.at),
-                                   champion (f, split.at)))
+models <- combine( split.at, list (champion (f, split.at), 
+                                   challenger (f, split.at)))
 
 # score by model
 models <- models [is.finite(usage)]
