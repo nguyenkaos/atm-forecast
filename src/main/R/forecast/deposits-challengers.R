@@ -21,6 +21,16 @@ champion <- function (features,
 }
 
 #
+# BUG
+# Error in cut.default(y, unique(quantile(y, probs = seq(0, 1, length = cuts))),:invalid number of intervals
+#                      Calls: combine ... createMultiFolds -> createFolds -> cut -> cut.default
+#                      Execution halted
+# the second arg to cut is either 0 or 1 which is throwing the errors
+# 
+# when does the following equal either 0 or 1???
+# unique(quantile(y, probs = seq(0, 1, length = cuts)))
+
+#
 # train a challenger model.  this model uses GBM and performs centering
 # and scaling of the 
 #
@@ -43,7 +53,9 @@ alpha <- function (features,
         
         features[
             # include only those ATMs that pass the 'subset' expression
-            eval (parse (text = subset)) & !is.na(usage),
+            eval (parse (text = subset)) & !is.na(usage) 
+            & !(atm %in% c("CA1537","CA2859","FL0269","FL0666","FL0712","IL0604",
+                           "IL0611","NJ0126","NY0875","TX0631")), # TEMP REMOVE ME
             
             # train and fit a model
             list (
