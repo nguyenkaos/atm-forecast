@@ -73,8 +73,8 @@ validate <- function (features, ...) {
     setkeyv (features, c("atm", "trandate"))
     setcolorder (features, neworder = c(2, 1, 3, 4:ncol (features)))
     
-    # only 'usage' can be NA, all others must be finite
-    finite <- is.finite(features)
+    # all features must be finite - two exceptions: 'usage' and future 'lags'
+    finite <- is.finite (features[ !is.na(usage) ])
     if(sum(finite) < length (colnames (features)) - 1) {
         bad <- paste (names (finite)[!finite], collapse = ", ") 
         stop (sprintf ("all values must be finite: '%s'", bad))
@@ -91,7 +91,6 @@ dates <- function (features) {
     features[, `:=`(
         atm              = ordered( atm),
         trandate         = as.Date (trandate, format="%m/%d/%Y"),
-        #trandate.n       = as.integer (trandate),
         quarter          = quarter (trandate),
         month.of.year    = month (trandate),
         day.of.year      = yday (trandate),
@@ -206,49 +205,49 @@ localTrends <- function (data) {
     
     loginfo ("creating trend by (atm, week.of.year)")
     data[,`:=`( woy.mean = mean.finite(usage),
-#                woy.min = min.finite(usage),
+                woy.min = min.finite(usage),
                 woy.max = max.finite(usage),
                 woy.sd = sd.finite(usage)),
          by = list (atm, week.of.year)]
     
     loginfo ("creating trend by (atm, month.of.year)")
     data[,`:=`( moy.mean = mean.finite(usage),
-#                moy.min = min.finite(usage),
+                moy.min = min.finite(usage),
                 moy.max = max.finite(usage),
                 moy.sd = sd.finite(usage)),
          by = list (atm, month.of.year)]   
     
     loginfo ("creating trend by (atm, day.of.week)")
     data[,`:=`( dow.mean = mean.finite(usage),
-#                dow.min = min.finite(usage),
+                dow.min = min.finite(usage),
                 dow.max = max.finite(usage),
                 dow.sd = sd.finite(usage)),
          by = list (atm, day.of.week)]  
     
     loginfo ("creating trend by (atm, week.of.month)")
     data[,`:=`( wom.mean = mean.finite(usage),
- #               wom.min = min.finite(usage),
+                wom.min = min.finite(usage),
                 wom.max = max.finite(usage),
                 wom.sd = sd.finite(usage)),
          by = list (atm, week.of.month)]  
     
     loginfo ("creating trend by (atm, quarter)")
     data[,`:=`( qua.mean = mean.finite(usage),
-    #            qua.min = min.finite(usage),
+                qua.min = min.finite(usage),
                 qua.max = max.finite(usage),
                 qua.sd = sd.finite(usage)),
          by = list (atm, quarter)] 
     
     loginfo ("creating trend by (atm, holiday)")
     data[,`:=`( hol.mean = mean.finite(usage),
-     #           hol.min = min.finite(usage),
+                hol.min = min.finite(usage),
                 hol.max = max.finite(usage),
                 hol.sd = sd.finite(usage)),
          by = list (atm, holiday)] 
     
     loginfo ("creating trend by (atm, payday)")
     data[,`:=`( pay.mean = mean.finite(usage),
-      #          pay.min = min.finite(usage),
+                pay.min = min.finite(usage),
                 pay.max = max.finite(usage),
                 pay.sd = sd.finite(usage)),
          by = list (atm, payday)]         
@@ -307,4 +306,25 @@ globalTrends <- function (data) {
                 pay.all.max = max.finite(usage),
                 pay.all.sd = sd.finite(usage)),
          by = payday]   
+}
+
+#
+# calculates the lagged differences (change in usage) between different 
+# intervals.  the intervals can be from one Monday to the next, from one 
+# week to the next, from one quarter to the next, etc
+#
+lags <- function (data) {
+    loginfo ("creating lagged differences")
+    
+    data [, lags.qua := c(0, diff (usage)), by = "quarter" ]
+    data [, lags.moy := c(0, diff (usage)), by = "month.of.year" ]
+    data [, lags.doy := c(0, diff (usage)), by = "day.of.year" ]
+    data [, lags.dos := c(0, diff (usage)), by = "day.of.semi.year" ]
+    data [, lags.doq := c(0, diff (usage)), by = "day.of.quarter" ]
+    data [, lags.dom := c(0, diff (usage)), by = "day.of.month" ]
+    data [, lags.dow := c(0, diff (usage)), by = "day.of.week" ]
+    data [, lags.woy := c(0, diff (usage)), by = "week.of.year" ]
+    data [, lags.wom := c(0, diff (usage)), by = "week.of.month" ]
+    data [, lags.pay := c(0, diff (usage)), by = "payday" ]
+    data [, lags.hol := c(0, diff (usage)), by = "holiday" ]
 }

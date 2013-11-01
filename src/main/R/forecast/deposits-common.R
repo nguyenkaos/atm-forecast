@@ -20,6 +20,7 @@ buildFeatures <- function (history.file = opts$historyFile,
         holidays (deposits, forecast.to,)
         localTrends (deposits)  
         globalTrends (deposits)
+        lags (deposits)
         
         # validate the feature set
         validate (deposits)
@@ -61,7 +62,8 @@ scoreBy <- function (models, by, export.file = NA, min.date = -Inf, max.date = I
             points    = sum (points (usage, usage.hat)),
             u05.ape   = between (ape (usage, usage.hat), 0.00, 0.05),
             u10.ape   = between (ape (usage, usage.hat), 0.05, 0.10),
-            u20.ape   = between (ape (usage, usage.hat), 0.10, 0.20),
+            u15.ape   = between (ape (usage, usage.hat), 0.10, 0.15),
+            u20.ape   = between (ape (usage, usage.hat), 0.15, 0.20),
             over.ape  = between (ape (usage, usage.hat), 0.20, Inf),
             total.obs = length (usage),
             total.atm = length (unique (atm))
