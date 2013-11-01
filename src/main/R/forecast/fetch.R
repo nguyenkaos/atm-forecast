@@ -168,6 +168,29 @@ paydays <- function (features,
 }
 
 #
+# adds information about the dates for social security payments which may impact
+# ATM activity.
+#
+socialSecurity <- function (features, 
+                            ss.file = "social-security.csv",
+                            data.dir = "../../resources") {
+    
+    # read the social security data
+    ss.path <- sprintf ("%s/%s", data.dir, ss.file)
+    ss.raw <- read.csv (ss.path, colClasses = c("Date"))
+    
+    # create a data table
+    ss <- data.table (ss.raw, social.security = TRUE, key = "date")
+
+    # add in the social security pay dates
+    setkeyv (features, c("trandate"))
+    features [ss, social.security := social.security]
+    features [is.na(social.security), social.security := FALSE]
+    
+    setkeyv (features, c("atm", "trandate"))
+}
+
+#
 # Adds events to the data set.
 #
 events <- function (features, 
