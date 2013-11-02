@@ -47,8 +47,6 @@ library("logging")
 library("foreach")
 library("Metrics")
 library("caretEnsemble")
-#library("devtools")
-#install_github('caretEnsemble', 'zachmayer')
 
 # other project sources
 source("../common/cache.R")

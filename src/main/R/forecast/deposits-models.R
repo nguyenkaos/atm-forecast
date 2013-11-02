@@ -91,8 +91,7 @@ trainThenPredict <- function (by,
                 
             # ignore any training failures
             }, error = function(e) {
-                logwarn("%s: unable to train '%s': %s", by, args, e)
-                traceback()
+                logwarn("%s: error encountered while training: %s", by, e)
             })  
         })
         

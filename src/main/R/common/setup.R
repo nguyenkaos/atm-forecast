@@ -37,8 +37,16 @@ setup <- function(mirror=81) {
                  "logging",
                  "data.table",
                  "optparse",
-                 "Metrics")
+                 "Metrics",
+                 "glmnet",
+                 "earth",
+                 "lars",
+                 "kernlab",
+                 "pbapply")
     sapply(required, install)
+    
+    library("devtools")
+    install_github('caretEnsemble', 'zachmayer')
     
     cat("installation successful\n")
 }
