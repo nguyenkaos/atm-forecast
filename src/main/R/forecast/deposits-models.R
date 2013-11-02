@@ -21,17 +21,6 @@ champion <- function (features,
 }
 
 #
-# BUG
-# Error in cut.default(y, unique(quantile(y, probs = seq(0, 1, length = cuts))),:invalid number of intervals
-#                      Calls: combine ... createMultiFolds -> createFolds -> cut -> cut.default
-#                      Execution halted
-# the second arg to cut is either 0 or 1 which is throwing the errors
-# 
-# when does the following equal either 0 or 1???
-# unique(quantile(y, probs = seq(0, 1, length = cuts)))
-
-
-#
 # train the challenger and make a prediction for a specific ATM
 #
 trainThenPredict <- function (by,
@@ -68,8 +57,8 @@ trainThenPredict <- function (by,
         loginfo("%s: training with '%s' obs and '%s' features prior to '%s'.", 
                 by, nrow(train.x), ncol(train.x), split.at)
         
-        # no shirt, no shoes, no data = no training
-        if (nrow (train.x) <= 0) {
+        # if no training data, or training response all 0s then don't train
+        if (nrow (train.x) <= 0 || all(train.y == 0)) {
             return (NULL)
         }
         
@@ -87,23 +76,23 @@ trainThenPredict <- function (by,
         
         # define each of the challenger models
         challengers.def <- list ( 
-            gbm    = list (x = train.x, y = train.y, trControl = ctrl, method = "gbm", distribution = "poisson", verbose = F, keep.data = T),
-            svm    = list (x = train.x, y = train.y, trControl = ctrl, method = "svmRadial"),                    
-            glmnet = list (x = train.x, y = train.y, trControl = ctrl, method = "glmnet"),
-            earth  = list (x = train.x, y = train.y, trControl = ctrl, method = "earth"),
-            lasso  = list (x = train.x, y = train.y, trControl = ctrl, method = "lasso"),
-            nnet   = list (x = train.x, y = train.y, trControl = ctrl, method = "nnet", trace = F))
+            list (x = train.x, y = train.y, trControl = ctrl, method = "gbm", distribution = "poisson", verbose = F, keep.data = T),
+            list (x = train.x, y = train.y, trControl = ctrl, method = "svmRadial"),                    
+            list (x = train.x, y = train.y, trControl = ctrl, method = "glmnet"),
+            list (x = train.x, y = train.y, trControl = ctrl, method = "earth"),
+            list (x = train.x, y = train.y, trControl = ctrl, method = "lasso"),
+            list (x = train.x, y = train.y, trControl = ctrl, method = "nnet", trace = F))
         
-        challengers <- sapply (challengers.def, function(args) {
+        challengers <- lapply (challengers.def, function(args) {
             
             # train each of the challengers
             tryCatch( {
-                loginfo("%s: training with '%s", by, args)
                 do.call(train, args)
                 
             # ignore any training failures
             }, error = function(e) {
                 logwarn("%s: unable to train '%s': %s", by, args, e)
+                traceback()
             })  
         })
         
