@@ -75,7 +75,7 @@ trainThenPredict <- function (by,
         
         # define how tuning of the models should occur
         ctrl <- trainControl (
-            method          = "cv", #"repeatedcv
+            method          = "repeatedcv", #"repeatedcv
             number          = 5, 
             repeats         = 1,
             returnResamp    = "none", 
@@ -85,17 +85,33 @@ trainThenPredict <- function (by,
             allowParallel   = TRUE,
             index = createMultiFolds (train.y, k = 5, times = 1))
         
-        # train a number of challenger models
-        all.models <- list (
-            train (x = train.x, y = train.y, trControl = ctrl, method = "gbm", distribution = "poisson", verbose = F, keep.data = T),
-            train (x = train.x, y = train.y, trControl = ctrl, method = "svmRadial"),
-            train (x = train.x, y = train.y, trControl = ctrl, method = "glmnet"),
-            train (x = train.x, y = train.y, trControl = ctrl, method = "earth"),
-            train (x = train.x, y = train.y, trControl = ctrl, method = "lasso"),
-            train (x = train.x, y = train.y, trControl = ctrl, method = "nnet", trace = F))
+        # define each of the challenger models
+        challengers.def <- list ( 
+            gbm    = list (x = train.x, y = train.y, trControl = ctrl, method = "gbm", distribution = "poisson", verbose = F, keep.data = T),
+            svm    = list (x = train.x, y = train.y, trControl = ctrl, method = "svmRadial"),                    
+            glmnet = list (x = train.x, y = train.y, trControl = ctrl, method = "glmnet"),
+            earth  = list (x = train.x, y = train.y, trControl = ctrl, method = "earth"),
+            lasso  = list (x = train.x, y = train.y, trControl = ctrl, method = "lasso"),
+            nnet   = list (x = train.x, y = train.y, trControl = ctrl, method = "nnet", trace = F))
+        
+        challengers <- sapply (challengers.def, function(args) {
+            
+            # train each of the challengers
+            tryCatch( {
+                loginfo("%s: training with '%s", by, args)
+                do.call(train, args)
+                
+            # ignore any training failures
+            }, error = function(e) {
+                logwarn("%s: unable to train '%s': %s", by, args, e)
+            })  
+        })
+        
+        # remove any NULLs which would indicate failed training for one of the models
+        challengers[ sapply(challengers, is.null)] <- NULL
         
         # create a greedy ensemble 
-        greedy <- caretEnsemble (all.models, iter = 1000L)
+        greedy <- caretEnsemble (challengers, iter = 1000L)
     })
     
     # log information about the trained model
