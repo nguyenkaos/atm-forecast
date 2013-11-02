@@ -68,8 +68,8 @@ trainThenPredict <- function (by,
         loginfo("%s: training with '%s' obs and '%s' features prior to '%s'.", 
                 by, nrow(train.x), ncol(train.x), split.at)
         
-        # no shirt, no shoes, no data = no training
-        if (nrow (train.x) <= 0) {
+        # if no training data, or training response all 0s then don't train
+        if (nrow (train.x) <= 0 || all(train.y == 0)) {
             return (NULL)
         }
         
