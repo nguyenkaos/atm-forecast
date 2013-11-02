@@ -21,9 +21,12 @@ buildFeatures <- function (history.file = opts$historyFile,
         localTrends (deposits)  
         globalTrends (deposits)
         lags (deposits)
+        socialSecurity (deposits)
         
         # validate the feature set
         validate (deposits)
+        
+        loginfo("completed building feature set with '%s' obs and '%s' features", nrow(deposits), ncol(deposits))
         deposits
     })
 }

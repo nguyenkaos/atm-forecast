@@ -21,6 +21,17 @@ champion <- function (features,
 }
 
 #
+# BUG
+# Error in cut.default(y, unique(quantile(y, probs = seq(0, 1, length = cuts))),:invalid number of intervals
+#                      Calls: combine ... createMultiFolds -> createFolds -> cut -> cut.default
+#                      Execution halted
+# the second arg to cut is either 0 or 1 which is throwing the errors
+# 
+# when does the following equal either 0 or 1???
+# unique(quantile(y, probs = seq(0, 1, length = cuts)))
+
+
+#
 # train the challenger and make a prediction for a specific ATM
 #
 trainThenPredict <- function (by,
@@ -40,7 +51,7 @@ trainThenPredict <- function (by,
     data.x <- data.x[, -nearZeroVar(data.x)]
     
     # perform PCA to reduce the feature set
-    pre <- preProcess(data.x, method = c("center", "scale", "pca"))
+    pre <- preProcess(data.x, method = c("center", "scale")) # pca
     data.x <- predict(pre, data.x)
     
     # split the training and test data
@@ -77,7 +88,6 @@ trainThenPredict <- function (by,
         # train a number of challenger models
         all.models <- list (
             train (x = train.x, y = train.y, trControl = ctrl, method = "gbm", distribution = "poisson", verbose = F, keep.data = T),
-            train (x = train.x, y = train.y, trControl = ctrl, method = "parRF" ),
             train (x = train.x, y = train.y, trControl = ctrl, method = "svmRadial"),
             train (x = train.x, y = train.y, trControl = ctrl, method = "glmnet"),
             train (x = train.x, y = train.y, trControl = ctrl, method = "earth"),

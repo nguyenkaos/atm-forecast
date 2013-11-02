@@ -73,7 +73,7 @@ models <- combine( split.at, list (champion (f, split.at),
 models <- models [is.finite(usage)]
 scoreBy (models,
          by          = quote (list (model)),
-         min.date    = "2013-09-01",
+         min.date    = "2013-08-01",
          max.date    = "2013-09-30",
          export.file = sprintf("%s-score-by-model.csv", data.id))
 
