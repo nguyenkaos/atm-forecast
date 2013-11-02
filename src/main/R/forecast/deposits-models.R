@@ -28,7 +28,8 @@ trainThenPredict <- function (by,
                               split.at,
                               data.id,
                               formula = usage ~ . -1,
-                              default.predict = 0.0) {
+                              default.predict = 0.0,
+                              max.prediction = 6000) {
     by <- by[[1]]
     
     # create the design matrix
@@ -64,21 +65,22 @@ trainThenPredict <- function (by,
         
         # define how tuning of the models should occur
         ctrl <- trainControl (
-            method          = "repeatedcv", #"repeatedcv
-            number          = 5, 
-            repeats         = 1,
-            returnResamp    = "none", 
-            classProbs      = TRUE,
-            returnData      = FALSE, 
-            savePredictions = TRUE,
-            allowParallel   = TRUE,
-            index = createMultiFolds (train.y, k = 5, times = 1))
+            method           = "repeatedcv", #"repeatedcv
+            number           = 5, 
+            repeats          = 1,
+            returnResamp     = "none", 
+            classProbs       = TRUE,
+            returnData       = FALSE, 
+            savePredictions  = TRUE,
+            allowParallel    = TRUE,
+            predictionBounds = c(0, max.prediction),
+            index            = createMultiFolds (train.y, k = 5, times = 1))
         
         # define each of the challenger models
         challengers.def <- list ( 
             list (x = train.x, y = train.y, trControl = ctrl, method = "gbm", distribution = "poisson", verbose = F, keep.data = T),
             list (x = train.x, y = train.y, trControl = ctrl, method = "svmRadial"),                    
-            list (x = train.x, y = train.y, trControl = ctrl, method = "glmnet"),
+            list (x = train.x, y = train.y, trControl = ctrl, method = "glmnet", family = "poisson"),
             list (x = train.x, y = train.y, trControl = ctrl, method = "earth"),
             list (x = train.x, y = train.y, trControl = ctrl, method = "lasso"),
             list (x = train.x, y = train.y, trControl = ctrl, method = "nnet", trace = F))
@@ -110,8 +112,8 @@ trainThenPredict <- function (by,
     # make prediction based on the model - predict for all test/train
     prediction <- default.predict 
     if (!is.null (fit)) {
-        loginfo("%s: predicting for '%s' all test/train obs.", by, nrow (data.x))
         prediction <- round (predict (fit, newdata = data.x))
+        loginfo("%s: predicting for '%s' test/train obs: %s", by, nrow (data.x), summary (prediction))
     }
     
     return (prediction)

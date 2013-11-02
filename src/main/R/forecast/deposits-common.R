@@ -58,6 +58,8 @@ scoreBy <- function (models, by, export.file = NA, min.date = -Inf, max.date = I
     scores <- models [
         trandate >= min.date & trandate <= max.date
         , list (
+            usage     = sum (usage),
+            usage.hat = sum (usage.hat),
             err.total = sum(usage) - sum(usage.hat),
             err.abs   = sum (abs (usage - usage.hat)),
             mape      = mape (usage, usage.hat),
