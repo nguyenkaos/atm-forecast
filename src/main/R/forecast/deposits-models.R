@@ -25,11 +25,12 @@ champion <- function (features,
 #
 trainThenPredict <- function (by,
                               data, 
-                              split.at,
                               data.id,
-                              formula = usage ~ . -1,
+                              formula = usage ~ . -1 -train,
                               default.predict = 0.0) {
     by <- by[[1]]
+    
+    train.index <- which (data[["train"]] == 1)
     
     # create the design matrix
     frame <- model.frame(formula, data)
@@ -39,12 +40,11 @@ trainThenPredict <- function (by,
     # remove features with little to no variance
     data.x <- data.x[, -nearZeroVar(data.x)]
     
-    # perform PCA to reduce the feature set
+    # additional pre-processing to prepare for training
     pre <- preProcess(data.x, method = c("center", "scale")) # pca
     data.x <- predict(pre, data.x)
     
     # split the training and test data
-    train.index <- which ( data[["trandate"]] < as.Date (split.at) )
     train.x <- data.x [ train.index, ]
     train.y <- data.y [ train.index  ]
     test.x <- data.x [ -train.index, ]
@@ -54,8 +54,7 @@ trainThenPredict <- function (by,
     fit.cache <- sprintf ("%s-%s", data.id, by)
     fit <- cache (fit.cache, {
         
-        loginfo("%s: training with '%s' obs and '%s' features prior to '%s'.", 
-                by, nrow(train.x), ncol(train.x), split.at)
+        loginfo("%s: training with '%s' obs and '%s' features", by, nrow(train.x), ncol(train.x))
         
         # if no training data, or training response all 0s then don't train
         if (nrow (train.x) <= 0 || all(train.y == 0)) {
@@ -64,7 +63,7 @@ trainThenPredict <- function (by,
         
         # define how tuning of the models should occur
         ctrl <- trainControl (
-            method          = "repeatedcv", #"repeatedcv
+            method          = "repeatedcv",
             number          = 5, 
             repeats         = 1,
             returnResamp    = "none", 
@@ -122,7 +121,6 @@ trainThenPredict <- function (by,
 # and scaling of the 
 #
 challenger <- function (features, 
-                        split.at, 
                         subset = "T==T", 
                         data.id = basename.only (opts$historyFile)) {
     
@@ -137,7 +135,7 @@ challenger <- function (features,
             list (
                 trandate,
                 usage,
-                usage.hat = trainThenPredict (.BY, .SD, split.at, challenger.cache),
+                usage.hat = trainThenPredict (.BY, .SD, challenger.cache),
                 model = "challenger"
             ),
             

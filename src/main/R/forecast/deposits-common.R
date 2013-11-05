@@ -1,32 +1,45 @@
 #
 # create the feature set
 #
-buildFeatures <- function (history.file = opts$historyFile,
+buildFeatures <- function (split.at     = opts$splitAt,
+                           history.file = opts$historyFile,
                            data.dir     = opts$dataDir, 
                            forecast.out = opts$forecastOut) {
     
     deposits.cache <- sprintf("%s-features", basename.only(history.file))
     deposits <- cache (deposits.cache, {
         
-        # how far out should we forecast?
+        # fetch the deposits history
         forecast.to = today() + forecast.out
-        
-        # fetch usage history
         deposits <- fetch (history.file, forecast.to, data.dir)
+
+        # split and mark test versus training data
+        split.at <- as.Date(split.at)
+        train.index <- which ( deposits[["trandate"]] < split.at )
+        deposits [trandate < split.at, train := 1, ]
+        deposits [trandate >= split.at, train := 0, ]
+        
+        # remove 'usage' from test data to prevent accidental 'bleed-through'
+        deposits.usage <- deposits[,list(atm, trandate, usage.saved = usage)]
+        deposits [train == 0, usage := NA, ]
         
         # generate the feature set
         dates (deposits)
-        paydays (deposits, forecast.to)
-        holidays (deposits, forecast.to,)
-        localTrends (deposits)  
-        globalTrends (deposits)
-        lags (deposits)
+        paydays (deposits)
+        holidays (deposits)
         socialSecurity (deposits)
+        rollingTrends(deposits)
+        #lags (deposits)
+        
+        # add the 'usage' back into the feature set
+        setkeyv(deposits, c("atm", "trandate"))
+        setkeyv(deposits.usage, c("atm", "trandate"))
+        deposits [deposits.usage, usage := usage.saved]
         
         # validate the feature set
         validate (deposits)
         
-        loginfo("completed building feature set with '%s' obs and '%s' features", nrow(deposits), ncol(deposits))
+        loginfo("completed building feature set: [%s x %s]", nrow(deposits), ncol(deposits))
         deposits
     })
 }

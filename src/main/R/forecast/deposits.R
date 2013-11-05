@@ -59,13 +59,13 @@ source("deposits-models.R")
 # initialization
 options (warn = 0)
 basicConfig (level = loglevels [opts$logLevel])
-split.at <- opts$splitAt
 data.id <- basename.only (opts$historyFile)
+split <- opts$splitAt
 
 # generate the features, build the champion and challengers, and combine them for scoring
-f <- buildFeatures()
-models <- combine( split.at, list (champion (f, split.at), 
-                                   challenger (f, split.at)))
+f <- buildFeatures (split)
+models <- combine (split, list (champion (f, split), 
+                                challenger (f)))
 
 # score by model
 models <- models [is.finite(usage)]
