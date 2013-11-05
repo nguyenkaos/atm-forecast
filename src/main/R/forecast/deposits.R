@@ -68,7 +68,7 @@ models <- combine (split, list (champion (f, split),
                                 challenger (f)))
 
 # score by model
-models <- models [is.finite(usage)]
+models <- models [is.finite (usage)]
 scoreBy (models,
          by          = quote (list (model)),
          min.date    = "2013-08-01",
@@ -78,14 +78,14 @@ scoreBy (models,
 # should a detailed score be produced?
 if (opts$verbose) {
     
-    # score the models by atm
+    # score by atm
     scoreBy (models,
              by          = quote (list (model, atm)),
              min.date    = "2013-09-01",
              max.date    = "2013-09-30",
              export.file = sprintf("%s-score-by-atm.csv", data.id))
     
-    # score the models by atm-date
+    # score by atm-day
     scoreBy (models, 
              by          = quote (list (model, atm, trandate)), 
              min.date    = "2013-09-01",

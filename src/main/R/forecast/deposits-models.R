@@ -41,7 +41,7 @@ trainThenPredict <- function (by,
     data.x <- data.x[, -nearZeroVar(data.x)]
     
     # additional pre-processing to prepare for training
-    pre <- preProcess(data.x, method = c("center", "scale")) # pca
+    pre <- preProcess(data.x, method = c("center", "scale")) 
     data.x <- predict(pre, data.x)
     
     # split the training and test data
@@ -75,7 +75,7 @@ trainThenPredict <- function (by,
         
         # define each of the challenger models
         challengers.def <- list ( 
-            list (x = train.x, y = train.y, trControl = ctrl, method = "gbm", distribution = "poisson", verbose = F, keep.data = T),
+            list (x = train.x, y = train.y, trControl = ctrl, method = "gbm", verbose = F, keep.data = T),
             list (x = train.x, y = train.y, trControl = ctrl, method = "svmRadial"),                    
             list (x = train.x, y = train.y, trControl = ctrl, method = "glmnet"),
             list (x = train.x, y = train.y, trControl = ctrl, method = "earth"),
@@ -98,18 +98,17 @@ trainThenPredict <- function (by,
         challengers[ sapply(challengers, is.null)] <- NULL
         
         # create a greedy ensemble 
-        greedy <- caretEnsemble (challengers, iter = 1000L)
+        fit <- caretEnsemble (challengers, iter = 1000L)
     })
     
     # log information about the trained model
     w <- sort(fit$weights, decreasing = TRUE)
-    loginfo("%s: ensemble chosen with rmse: %.2f models: %s", by, fit$error,  
-            paste (names(w), w, sep = ":", collapse=", "))
+    loginfo("%s: ensemble chosen with rmse: %.2f models: %s", by, fit$error,  paste (names(w), w, sep = ":", collapse=", "))
     
     # make prediction based on the model - predict for all test/train
     prediction <- default.predict 
     if (!is.null (fit)) {
-        loginfo("%s: predicting for '%s' all test/train obs.", by, nrow (data.x))
+        loginfo("%s: predicting with '%s' obs and '%s' features", by, nrow (data.x), ncol(data.x))
         prediction <- round (predict (fit, newdata = data.x))
     }
     
