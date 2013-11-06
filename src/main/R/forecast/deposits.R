@@ -29,7 +29,7 @@ getOptions <- function() {
                      action  = "store_true"),
         make_option (c("--verbose"),
                      help    = "The verbosity of the champion/challenger comparison [default: %default]",
-                     default = TRUE,
+                     default = FALSE,
                      action  = "store_true")
     )
     opts <- parse_args (OptionParser (option_list = all_options))
