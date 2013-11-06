@@ -221,15 +221,7 @@ rollingTrends <- function (history) {
     rollingTrendBy ("qua", by = quote (c("atm", "quarter")), history)
     rollingTrendBy ("hol", by = quote (c("atm", "holiday")), history)
     rollingTrendBy ("pay", by = quote (c("atm", "payday")), history)
-    
-    # rolling trends across the entire fleet
-    rollingTrendBy ("woy.all", by = quote (c("week.of.year")), history)
-    rollingTrendBy ("moy.all", by = quote (c("month.of.year")), history)
-    rollingTrendBy ("dow.all", by = quote (c("day.of.week")), history)
-    rollingTrendBy ("wom.all", by = quote (c("week.of.month")), history)
-    rollingTrendBy ("qua.all", by = quote (c("quarter")), history)
-    rollingTrendBy ("hol.all", by = quote (c("holiday")), history)
-    rollingTrendBy ("pay.all", by = quote (c("payday")), history)
+
 }    
 
 #
@@ -239,7 +231,6 @@ rollingTrends <- function (history) {
 #
 recentHistory <- function (history) {
     recentHistoryBy (history, "dow", quote (c ("atm", "day.of.week")))
-    recentHistoryBy (history, "dom", quote (c ("atm", "day.of.month")))
     recentHistoryBy (history, "wom", quote (c ("atm", "week.of.month")))
     recentHistoryBy (history, "hol", quote (c ("atm", "holiday")))
     recentHistoryBy (history, "pay", quote (c ("atm", "payday")))
@@ -301,38 +292,3 @@ recentHistoryBy <- function (history, name, by) {
     setnames(history, "prev.7", paste(name, "usage.prev.7", sep = "."))
 }
 
-#
-# compute a lagged version of the usage time series by some given
-# period such as day of week or month of year.
-#
-lagBy <- function(name, by, train, test) {
-    loginfo("creating lag difference by (%s)", eval(by))
-    
-    # calculate the lag difference **WITH TRAINING DATA ONLY**
-    lag <- train [, list ( 
-        #usage,
-        #lag = c(lag (usage)),
-        lag.diff = c(0, diff (usage))
-    ), by = c("atm", "quarter") ]
-    setkeyv(lag, eval (by))
-    
-    # merge the trend with the training data
-    setkeyv(train, eval(by))
-    train [trend, `:=` (mean = t.mean, min = t.min, max = t.max, sd = t.sd)]
-    
-    # create unique names for the trend's components
-    setnames(train, "mean", paste(name, "mean", sep = "."))
-    setnames(train, "min", paste(name, "min", sep = "."))
-    setnames(train, "max", paste(name, "max", sep = "."))
-    setnames(train, "sd", paste(name, "sd", sep = "."))
-    
-    # merge the trend with the test data
-    setkeyv(test, eval(by))
-    test [trend, `:=` (mean = t.mean, min = t.min, max = t.max, sd = t.sd)]
-    
-    # create unique names for the trend's components
-    setnames(test, "mean", paste(name, "mean", sep = "."))
-    setnames(test, "min", paste(name, "min", sep = "."))
-    setnames(test, "max", paste(name, "max", sep = "."))
-    setnames(test, "sd", paste(name, "sd", sep = "."))
-}
