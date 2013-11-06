@@ -29,11 +29,12 @@ trainThenPredict <- function (by,
                               formula = usage ~ . -1 -train,
                               default.predict = 0.0) {
     by <- by[[1]]
+    loginfo("%s: pre-processing: [%s x %s]", by, nrow(data), ncol(data))
     
     train.index <- which (data[["train"]] == 1)
     
     # create the design matrix
-    frame <- model.frame(formula, data)
+    frame <- model.frame(formula, data, na.action = NULL)
     data.y <- model.response(frame)
     data.x <- model.matrix(formula, frame)
     
@@ -53,8 +54,7 @@ trainThenPredict <- function (by,
     # cache the trained model
     fit.cache <- sprintf ("%s-%s", data.id, by)
     fit <- cache (fit.cache, {
-        
-        loginfo("%s: training with '%s' obs and '%s' features", by, nrow(train.x), ncol(train.x))
+        loginfo("%s: training: [%s x %s]", by, nrow(train.x), ncol(train.x))
         
         # if no training data, or training response all 0s then don't train
         if (nrow (train.x) <= 0 || all(train.y == 0)) {
@@ -75,23 +75,18 @@ trainThenPredict <- function (by,
         
         # define each of the challenger models
         challengers.def <- list ( 
-            list (x = train.x, y = train.y, trControl = ctrl, method = "gbm", verbose = F, keep.data = T),
-            list (x = train.x, y = train.y, trControl = ctrl, method = "svmRadial"),                    
+            list (x = train.x, y = train.y, trControl = ctrl, method = "gbm", verbose = F, keep.data = T), 
+            list (x = train.x, y = train.y, trControl = ctrl, method = "svmRadial"), 
             list (x = train.x, y = train.y, trControl = ctrl, method = "glmnet"),
             list (x = train.x, y = train.y, trControl = ctrl, method = "earth"),
             list (x = train.x, y = train.y, trControl = ctrl, method = "lasso"),
-            list (x = train.x, y = train.y, trControl = ctrl, method = "nnet", trace = F))
+            list (x = train.x, y = train.y, trControl = ctrl, method = "nnet", trace = F)
+        )
         
+        # train each of the challengers; ignore any training failures
         challengers <- lapply (challengers.def, function(args) {
-            
-            # train each of the challengers
-            tryCatch( {
-                do.call(train, args)
-                
-            # ignore any training failures
-            }, error = function(e) {
-                logwarn("%s: error encountered while training: %s", by, e)
-            })  
+            tryCatch( do.call(train, args), 
+                      error = function(e) logwarn("%s: error encountered while training: %s", by, e))  
         })
         
         # remove any NULLs which would indicate failed training for one of the models
@@ -108,7 +103,7 @@ trainThenPredict <- function (by,
     # make prediction based on the model - predict for all test/train
     prediction <- default.predict 
     if (!is.null (fit)) {
-        loginfo("%s: predicting with '%s' obs and '%s' features", by, nrow (data.x), ncol(data.x))
+        loginfo("%s: predicting: [%s x %s]", by, nrow (data.x), ncol(data.x))
         prediction <- round (predict (fit, newdata = data.x))
     }
     

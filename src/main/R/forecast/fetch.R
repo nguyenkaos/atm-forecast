@@ -50,13 +50,6 @@ validate <- function (features, ...) {
     # tidy up the feature set
     setkeyv (features, c("atm", "trandate"))
     setcolorder (features, neworder = c(2, 1, 3, 4:ncol (features)))
-    
-    # all features must be finite - two exceptions: 'usage' and future 'lags'
-    finite <- is.finite (features[ !is.na(usage) ])
-    if(sum(finite) < length (colnames (features)) - 1) {
-        bad <- paste (names (finite)[!finite], collapse = ", ") 
-        stop (sprintf ("all values must be finite: '%s'", bad))
-    }
 }
 
 #
@@ -190,11 +183,11 @@ events <- function (features,
     return(features)
 }
 
-trendBy <- function(name, by, deposits) {
+rollingTrendBy <- function(name, by, history) {
     loginfo("creating rolling trend by (%s)", eval(by))
     
     # calculate the trend **WITH TRAINING DATA ONLY**
-    trend <- deposits [ 
+    trend <- history [ 
         train == 1, 
         list ( 
             t.mean = mean.finite (usage),
@@ -205,39 +198,108 @@ trendBy <- function(name, by, deposits) {
     setkeyv(trend, eval(by))
     
     # merge the trend with the training data
-    setkeyv(deposits, eval(by))
-    deposits [trend, `:=` (mean = t.mean, min = t.min, max = t.max, sd = t.sd)]
+    setkeyv(history, eval(by))
+    history [trend, `:=` (mean = t.mean, min = t.min, max = t.max, sd = t.sd)]
     
     # create unique names for the trend's components
-    setnames(deposits, "mean", paste(name, "mean", sep = "."))
-    setnames(deposits, "min", paste(name, "min", sep = "."))
-    setnames(deposits, "max", paste(name, "max", sep = "."))
-    setnames(deposits, "sd", paste(name, "sd", sep = "."))
+    setnames(history, "mean", paste(name, "mean", sep = "."))
+    setnames(history, "min", paste(name, "min", sep = "."))
+    setnames(history, "max", paste(name, "max", sep = "."))
+    setnames(history, "sd", paste(name, "sd", sep = "."))
 }
 
 #
 # adds a mean, min, max, sd to represent a trend by various groupings.
 #
-rollingTrends <- function (deposits) {
+rollingTrends <- function (history) {
     
     # rolling trends specific to each ATM
-    trendBy ("woy", by = quote (c("atm", "week.of.year")), deposits)
-    trendBy ("moy", by = quote (c("atm", "month.of.year")), deposits)
-    trendBy ("dow", by = quote (c("atm", "day.of.week")), deposits)
-    trendBy ("wom", by = quote (c("atm", "week.of.month")), deposits)
-    trendBy ("qua", by = quote (c("atm", "quarter")), deposits)
-    trendBy ("hol", by = quote (c("atm", "holiday")), deposits)
-    trendBy ("pay", by = quote (c("atm", "payday")), deposits)
+    rollingTrendBy ("woy", by = quote (c("atm", "week.of.year")), history)
+    rollingTrendBy ("moy", by = quote (c("atm", "month.of.year")), history)
+    rollingTrendBy ("dow", by = quote (c("atm", "day.of.week")), history)
+    rollingTrendBy ("wom", by = quote (c("atm", "week.of.month")), history)
+    rollingTrendBy ("qua", by = quote (c("atm", "quarter")), history)
+    rollingTrendBy ("hol", by = quote (c("atm", "holiday")), history)
+    rollingTrendBy ("pay", by = quote (c("atm", "payday")), history)
     
     # rolling trends across the entire fleet
-    trendBy ("woy.all", by = quote (c("week.of.year")), deposits)
-    trendBy ("moy.all", by = quote (c("month.of.year")), deposits)
-    trendBy ("dow.all", by = quote (c("day.of.week")), deposits)
-    trendBy ("wom.all", by = quote (c("week.of.month")), deposits)
-    trendBy ("qua.all", by = quote (c("quarter")), deposits)
-    trendBy ("hol.all", by = quote (c("holiday")), deposits)
-    trendBy ("pay.all", by = quote (c("payday")), deposits)
+    rollingTrendBy ("woy.all", by = quote (c("week.of.year")), history)
+    rollingTrendBy ("moy.all", by = quote (c("month.of.year")), history)
+    rollingTrendBy ("dow.all", by = quote (c("day.of.week")), history)
+    rollingTrendBy ("wom.all", by = quote (c("week.of.month")), history)
+    rollingTrendBy ("qua.all", by = quote (c("quarter")), history)
+    rollingTrendBy ("hol.all", by = quote (c("holiday")), history)
+    rollingTrendBy ("pay.all", by = quote (c("payday")), history)
 }    
+
+#
+# transposes recent history from a time series to a fixed width form that
+# can be used for machine learning.  since forecast is at a minimum 2 weeks
+# out
+#
+recentHistory <- function (history) {
+    recentHistoryBy (history, "dow", quote (c ("atm", "day.of.week")))
+    recentHistoryBy (history, "dom", quote (c ("atm", "day.of.month")))
+    recentHistoryBy (history, "wom", quote (c ("atm", "week.of.month")))
+    recentHistoryBy (history, "hol", quote (c ("atm", "holiday")))
+    recentHistoryBy (history, "pay", quote (c ("atm", "payday")))
+    recentHistoryBy (history, "soc", quote (c ("atm", "social.security")))
+}
+
+#
+# shifts a vector over 'n' slots and back-fills with NAs
+#
+shift = function(vec, n) { 
+    nas.to.add <- min(n, length(vec))
+    c(rep (NA, nas.to.add), head (vec, -n))
+}
+
+#
+# adds the previous 7 values of usage by some given period.  for example, if by = 
+# c("atm", "day.of.week") a particular observation will be amended with the usage
+# values for the previous 7 similar week days.  if the observation is for a Monday,
+# then the most recent 7 Mondays will be added.
+#
+recentHistoryBy <- function (history, name, by) {
+    loginfo("creating recent history by (%s)", eval(by))
+    
+    history [, `:=` (
+        prev.1 = shift (usage, 1),
+        prev.2 = shift (usage, 2),
+        prev.3 = shift (usage, 3),
+        prev.4 = shift (usage, 4),
+        prev.5 = shift (usage, 5),
+        prev.6 = shift (usage, 6),
+        prev.7 = shift (usage, 7)
+    ), by = by ]
+    
+    # calculate the column means
+    mean.prev.1 = mean (history$prev.1, na.rm = T)
+    mean.prev.2 = mean (history$prev.2, na.rm = T)
+    mean.prev.3 = mean (history$prev.3, na.rm = T)
+    mean.prev.4 = mean (history$prev.4, na.rm = T)
+    mean.prev.5 = mean (history$prev.5, na.rm = T)
+    mean.prev.6 = mean (history$prev.6, na.rm = T)
+    mean.prev.7 = mean (history$prev.7, na.rm = T)
+    
+    # replace all NAs with the column mean
+    history [ is.na(prev.1), prev.1 := mean.prev.1, ]
+    history [ is.na(prev.2), prev.2 := mean.prev.2, ]
+    history [ is.na(prev.3), prev.3 := mean.prev.3, ]
+    history [ is.na(prev.4), prev.4 := mean.prev.4, ]
+    history [ is.na(prev.5), prev.5 := mean.prev.5, ]
+    history [ is.na(prev.6), prev.6 := mean.prev.6, ]
+    history [ is.na(prev.7), prev.7 := mean.prev.7, ]
+    
+    # create unique names for the trend's components
+    setnames(history, "prev.1", paste(name, "usage.prev.1", sep = "."))
+    setnames(history, "prev.2", paste(name, "usage.prev.2", sep = "."))
+    setnames(history, "prev.3", paste(name, "usage.prev.3", sep = "."))
+    setnames(history, "prev.4", paste(name, "usage.prev.4", sep = "."))
+    setnames(history, "prev.5", paste(name, "usage.prev.5", sep = "."))
+    setnames(history, "prev.6", paste(name, "usage.prev.6", sep = "."))
+    setnames(history, "prev.7", paste(name, "usage.prev.7", sep = "."))
+}
 
 #
 # compute a lagged version of the usage time series by some given
@@ -273,27 +335,4 @@ lagBy <- function(name, by, train, test) {
     setnames(test, "min", paste(name, "min", sep = "."))
     setnames(test, "max", paste(name, "max", sep = "."))
     setnames(test, "sd", paste(name, "sd", sep = "."))
-}
-
-
-
-#
-# calculates the lagged differences (change in usage) between different 
-# intervals.  the intervals can be from one Monday to the next, from one 
-# week to the next, from one quarter to the next, etc
-#
-lags <- function (data) {
-    loginfo ("creating lagged differences")
-    
-    data [, lags.qua := c(0, diff (usage)), by = "quarter" ]
-    data [, lags.moy := c(0, diff (usage)), by = "month.of.year" ]
-    data [, lags.doy := c(0, diff (usage)), by = "day.of.year" ]
-    data [, lags.dos := c(0, diff (usage)), by = "day.of.semi.year" ]
-    data [, lags.doq := c(0, diff (usage)), by = "day.of.quarter" ]
-    data [, lags.dom := c(0, diff (usage)), by = "day.of.month" ]
-    data [, lags.dow := c(0, diff (usage)), by = "day.of.week" ]
-    data [, lags.woy := c(0, diff (usage)), by = "week.of.year" ]
-    data [, lags.wom := c(0, diff (usage)), by = "week.of.month" ]
-    data [, lags.pay := c(0, diff (usage)), by = "payday" ]
-    data [, lags.hol := c(0, diff (usage)), by = "holiday" ]
 }

@@ -29,7 +29,7 @@ getOptions <- function() {
                      action  = "store_true"),
         make_option (c("--verbose"),
                      help    = "The verbosity of the champion/challenger comparison [default: %default]",
-                     default = FALSE,
+                     default = TRUE,
                      action  = "store_true")
     )
     opts <- parse_args (OptionParser (option_list = all_options))
@@ -81,14 +81,14 @@ if (opts$verbose) {
     # score by atm
     scoreBy (models,
              by          = quote (list (model, atm)),
-             min.date    = "2013-09-01",
+             min.date    = "2013-08-01",
              max.date    = "2013-09-30",
              export.file = sprintf("%s-score-by-atm.csv", data.id))
     
     # score by atm-day
     scoreBy (models, 
              by          = quote (list (model, atm, trandate)), 
-             min.date    = "2013-09-01",
+             min.date    = "2013-08-01",
              max.date    = "2013-09-30",
              export.file = sprintf("%s-score-by-atm-date.csv", data.id))
 }

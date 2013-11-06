@@ -20,7 +20,7 @@ buildFeatures <- function (split.at     = opts$splitAt,
         deposits [trandate >= split.at, train := 0, ]
         
         # remove 'usage' from test data to prevent accidental 'bleed-through'
-        deposits.usage <- deposits[,list(atm, trandate, usage.saved = usage)]
+        deposits.usage <- deposits[, list(atm, trandate, usage.saved = usage)]
         deposits [train == 0, usage := NA, ]
         
         # generate the feature set
@@ -28,12 +28,12 @@ buildFeatures <- function (split.at     = opts$splitAt,
         paydays (deposits)
         holidays (deposits)
         socialSecurity (deposits)
-        rollingTrends(deposits)
-        #lags (deposits)
+        rollingTrends (deposits)
+        recentHistory (deposits)
         
         # add the 'usage' back into the feature set
-        setkeyv(deposits, c("atm", "trandate"))
-        setkeyv(deposits.usage, c("atm", "trandate"))
+        setkeyv (deposits, c("atm", "trandate"))
+        setkeyv (deposits.usage, c("atm", "trandate"))
         deposits [deposits.usage, usage := usage.saved]
         
         # validate the feature set
@@ -71,8 +71,8 @@ scoreBy <- function (models, by, export.file = NA, min.date = -Inf, max.date = I
     scores <- models [
         trandate >= min.date & trandate <= max.date
         , list (
-            err.total = sum(usage) - sum(usage.hat),
-            err.abs   = sum (abs (usage - usage.hat)),
+            usage     = sum (usage),
+            usage.hat = sum (usage.hat),
             mape      = mape (usage, usage.hat),
             rmse      = rmse (usage, usage.hat),
             points    = sum (points (usage, usage.hat)),
