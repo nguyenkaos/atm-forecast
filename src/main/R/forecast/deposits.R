@@ -49,6 +49,7 @@ library("Metrics")
 library("caretEnsemble")
 
 # other project sources
+source("../common/parallel.R")
 source("../common/cache.R")
 source("../common/utils.R")
 source("fetch.R")
