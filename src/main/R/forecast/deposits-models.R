@@ -21,6 +21,20 @@ champion <- function (features,
 }
 
 #
+# jumps through some extra hoops like replacing NAs
+#
+findCorrelation <- function(x, use = "pairwise.complete.obs", ...) {
+    
+    # generate a correlation matrix with no NAs
+    cor.mx <- cor (data.x, use = use)
+    cor.mx [is.na(cor.mx)] <- 0
+    
+    # allow caret to do the hard part
+    caret::findCorrelation(cor.mx)
+}
+
+
+#
 # train the challenger and make a prediction for a specific ATM
 #
 trainThenPredict <- function (by,
@@ -38,8 +52,11 @@ trainThenPredict <- function (by,
     data.y <- model.response(frame)
     data.x <- model.matrix(formula, frame)
     
-    # remove features with little to no variance
-    data.x <- data.x[, -nearZeroVar(data.x)]
+    # remove features that are highly correlated or with little to no variance
+    columns.ignore <- c( nearZeroVar(data.x), findCorrelation(data.x))
+    data.x <- data.x[, -columns.ignore]
+
+    loginfo("ignoring highly correlated/low variance features: (%s)", colnames(data.x)[sort(columns.ignore)])
     
     # additional pre-processing to prepare for training
     pre <- preProcess(data.x, method = c("center", "scale")) 
@@ -75,12 +92,12 @@ trainThenPredict <- function (by,
         
         # define each of the challenger models
         challengers.def <- list ( 
-            list (x = train.x, y = train.y, trControl = ctrl, method = "gbm", verbose = F, keep.data = T), 
-            list (x = train.x, y = train.y, trControl = ctrl, method = "svmRadial"), 
-            list (x = train.x, y = train.y, trControl = ctrl, method = "glmnet"),
-            list (x = train.x, y = train.y, trControl = ctrl, method = "earth"),
-            list (x = train.x, y = train.y, trControl = ctrl, method = "lasso"),
-            list (x = train.x, y = train.y, trControl = ctrl, method = "nnet", trace = F)
+            list (x = train.x, y = train.y, trControl = ctrl, method = "gbm", verbose = F, keep.data = T)
+            #list (x = train.x, y = train.y, trControl = ctrl, method = "svmRadial"), 
+            #list (x = train.x, y = train.y, trControl = ctrl, method = "glmnet"),
+            #list (x = train.x, y = train.y, trControl = ctrl, method = "earth"),
+            #list (x = train.x, y = train.y, trControl = ctrl, method = "lasso"),
+            #list (x = train.x, y = train.y, trControl = ctrl, method = "nnet", trace = F)
         )
         
         # train each of the challengers; ignore any training failures
