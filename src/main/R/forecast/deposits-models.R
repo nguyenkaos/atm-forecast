@@ -71,9 +71,8 @@ trainThenPredict <- function (by,
         test.x <- data.x [ -train.index, ]
         test.y <- data.y [ -train.index  ]
         
-        loginfo("%s: training: [%s x %s]", by, nrow(train.x), ncol(train.x))
-        
         # if no training data, or training response all 0s then don't train
+        loginfo("%s: training: [%s x %s]", by, nrow(train.x), ncol(train.x))
         if (nrow (train.x) <= 0 || all(train.y == 0)) {
             return (NULL)
         }
