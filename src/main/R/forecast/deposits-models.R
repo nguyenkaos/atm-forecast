@@ -43,7 +43,6 @@ trainThenPredict <- function (by,
                               formula = usage ~ . -1 -train,
                               default.predict = 0.0) {
     by <- by[[1]]
-    loginfo("%s: pre-processing: [%s x %s]", by, nrow(data), ncol(data))
     
     train.index <- which (data[["train"]] == 1)
     
@@ -52,25 +51,25 @@ trainThenPredict <- function (by,
     data.y <- model.response(frame)
     data.x <- model.matrix(formula, frame)
     
-    # remove features that are highly correlated or with little to no variance
-    columns.ignore <- c( nearZeroVar(data.x), findCorrelation(data.x))
-    data.x <- data.x[, -columns.ignore]
-
-    loginfo("ignoring highly correlated/low variance features: (%s)", colnames(data.x)[sort(columns.ignore)])
-    
-    # additional pre-processing to prepare for training
-    pre <- preProcess(data.x, method = c("center", "scale")) 
-    data.x <- predict(pre, data.x)
-    
-    # split the training and test data
-    train.x <- data.x [ train.index, ]
-    train.y <- data.y [ train.index  ]
-    test.x <- data.x [ -train.index, ]
-    test.y <- data.y [ -train.index  ]
-    
     # cache the trained model
     fit.cache <- sprintf ("%s-%s", data.id, by)
     fit <- cache (fit.cache, {
+        loginfo("%s: pre-processing: [%s x %s]", by, nrow(data), ncol(data))
+        
+        # remove features that are highly correlated or with little/no variance
+        data.x <- data.x[, -nearZeroVar(data.x)]
+        data.x <- data.x[, -findCorrelation(data.x)]
+        
+        # additional pre-processing to prepare for training
+        pre <- preProcess(data.x, method = c("center", "scale")) 
+        data.x <- predict(pre, data.x)
+        
+        # split the training and test data
+        train.x <- data.x [ train.index, ]
+        train.y <- data.y [ train.index  ]
+        test.x <- data.x [ -train.index, ]
+        test.y <- data.y [ -train.index  ]
+        
         loginfo("%s: training: [%s x %s]", by, nrow(train.x), ncol(train.x))
         
         # if no training data, or training response all 0s then don't train
@@ -119,6 +118,10 @@ trainThenPredict <- function (by,
     # log information about the trained model
     w <- sort(fit$weights, decreasing = TRUE)
     loginfo("%s: ensemble chosen with rmse: %.2f models: %s", by, fit$error,  paste (names(w), w, sep = ":", collapse=", "))
+    
+    # extract only the features used to train the model
+    features <- fit$models[[1]]$finalModel$xNames
+    data.x <- data.x[, features]
     
     # make prediction based on the model - predict for all test/train
     prediction <- default.predict 
