@@ -41,7 +41,8 @@ trainThenPredict <- function (by,
                               data, 
                               data.id,
                               formula = usage ~ . -1 -train,
-                              default.predict = 0.0) {
+                              default.predict = 0.0,
+                              max.prediction = 6000) {
     by <- by[[1]]
     
     train.index <- which (data[["train"]] == 1)
@@ -87,6 +88,7 @@ trainThenPredict <- function (by,
             returnData      = FALSE, 
             savePredictions = TRUE,
             allowParallel   = TRUE,
+            #predictionBounds = c(0, max.prediction),
             index = createMultiFolds (train.y, k = 5, times = 1))
         
         # define each of the challenger models
