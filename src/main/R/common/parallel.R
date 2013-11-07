@@ -1,10 +1,13 @@
-############################################################################
+#
 # This file should be sourced to enable some level of parallelism, especially
-# when using Plyr.
-############################################################################
+# when using Plyr and Caret.
+#
 
-#library("doMC")
-#registerDoMC(cores = 8)
+# parallel backend for UNIX
+library("doMC")
+registerDoMC()
 
-library("parallel")
-cl <- makeCluster(detectCores())
+# parallel backend for Windows
+#library("parallel")
+#cl <- makeCluster(detectCores())
+#stopCluster(cl)
