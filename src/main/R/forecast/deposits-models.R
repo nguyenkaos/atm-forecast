@@ -26,7 +26,7 @@ champion <- function (features,
 findCorrelation <- function(x, use = "pairwise.complete.obs", ...) {
     
     # generate a correlation matrix with no NAs
-    cor.mx <- cor (data.x, use = use)
+    cor.mx <- cor (x, use = use)
     cor.mx [is.na(cor.mx)] <- 0
     
     # allow caret to do the hard part
