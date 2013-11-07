@@ -65,7 +65,7 @@ combine <- function (compare.start, list.of.models) {
 # be a quoted argument to avoid pre-mature evaluation.  if 'export.file' is
 # provided the scores will be exported as a csv.
 # 
-scoreBy <- function (models, by, export.file = NA, min.date = -Inf, max.date = Inf) {
+scoreBy <- function (models, by, min.date = -Inf, max.date = Inf, export.file = NA) {
     
     # score the models
     scores <- models [

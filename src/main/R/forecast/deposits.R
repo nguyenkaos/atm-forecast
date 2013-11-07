@@ -57,40 +57,45 @@ source("score.R")
 source("deposits-common.R")
 source("deposits-models.R")
 
+score.min.date <- "2013-08-01"
+score.max.date <- "2013-09-30"
+
 # initialization
 options (warn = 1)
 basicConfig (level = loglevels [opts$logLevel])
 data.id <- basename.only (opts$historyFile)
 split <- opts$splitAt
 
-# generate the features, build the champion and challengers, and combine them for scoring
+# generate features, build the champion and challengers, and combine them for scoring
 f <- buildFeatures (split)
-models <- combine (split, list (champion (f, split), 
-                                challenger (f)))
+models <- combine (split, list (champion (f, split), challenger (f)))
 
 # score by model
 models <- models [is.finite (usage)]
-scoreBy (models,
-         by          = quote (list (model)),
-         min.date    = "2013-08-01",
-         max.date    = "2013-09-30",
-         export.file = sprintf("%s-score-by-model.csv", data.id))
+scoreBy (models, by = quote (list (model)), score.min.date, score.max.date) []
 
-# should a detailed score be produced?
+# should a detailed score be produced and exported?
 if (opts$verbose) {
+    
+    # score by model (and export to disk this time)
+    scoreBy (models,
+             by          = quote (list (model)),
+             min.date    = score.min.date,
+             max.date    = score.max.date,
+             export.file = sprintf("%s-score-by-model.csv", data.id))
     
     # score by atm
     scoreBy (models,
              by          = quote (list (model, atm)),
-             min.date    = "2013-08-01",
-             max.date    = "2013-09-30",
+             min.date    = score.min.date,
+             max.date    = score.max.date,
              export.file = sprintf("%s-score-by-atm.csv", data.id))
     
     # score by atm-day
     scoreBy (models, 
              by          = quote (list (model, atm, trandate)), 
-             min.date    = "2013-08-01",
-             max.date    = "2013-09-30",
+             min.date    = score.min.date,
+             max.date    = score.max.date,
              export.file = sprintf("%s-score-by-atm-date.csv", data.id))
 }
 

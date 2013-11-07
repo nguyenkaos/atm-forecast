@@ -81,7 +81,7 @@ trainThenPredict <- function (by,
         ctrl <- trainControl (
             method          = "repeatedcv",
             number          = 5, 
-            repeats         = 1,
+            repeats         = 3,
             returnResamp    = "none", 
             classProbs      = TRUE,
             returnData      = FALSE, 
@@ -106,7 +106,7 @@ trainThenPredict <- function (by,
         # train each of the challengers; ignore any training failures
         challengers <- lapply (challengers.def, function(args) {
             tryCatch( do.call(train, args), 
-                      error = function(e) logwarn("%s: error encountered while training: %s", by, e))  
+                      error = function(e) logwarn("%s: training error encountered: %s", by, e))  
         })
         
         # remove any NULLs which would indicate failed training for one of the models
@@ -124,14 +124,15 @@ trainThenPredict <- function (by,
     features <- fit$models[[1]]$finalModel$xNames
     data.x <- data.x[, features]
     
-    # make prediction based on the model - predict for all test/train
-    prediction <- default.predict 
-    if (!is.null (fit)) {
-        loginfo("%s: predicting: [%s x %s]", by, nrow (data.x), ncol(data.x))
-        prediction <- round (predict (fit, newdata = data.x))
-    }
-    
-    return (prediction)
+    # make a prediction - predict for all test/train
+    loginfo("%s: predicting: [%s x %s]", by, nrow (data.x), ncol(data.x))
+    prediction <- tryCatch ({
+        round (predict (fit, newdata = data.x))
+        
+    }, error = function(e) {
+        logerror("%s: prediction error; %s; using default: %s", by, e, default.predict)
+        return (default.predict)
+    })
 }
 
 #
@@ -161,6 +162,3 @@ challenger <- function (features,
             by = atm ] 
     })
 }
-
-
-
