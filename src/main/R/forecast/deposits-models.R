@@ -135,7 +135,7 @@ trainThenPredict <- function (by,
 # and scaling of the 
 #
 challenger <- function (features, 
-                        subset = "T==T", 
+                        subset = opts$subset, 
                         data.id = basename.only (opts$historyFile)) {
     
     challenger.cache <- sprintf ("%s-challenger", data.id)
