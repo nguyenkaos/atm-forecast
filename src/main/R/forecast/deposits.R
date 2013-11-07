@@ -58,7 +58,7 @@ source("deposits-common.R")
 source("deposits-models.R")
 
 # initialization
-options (warn = 0)
+options (warn = 1)
 basicConfig (level = loglevels [opts$logLevel])
 data.id <- basename.only (opts$historyFile)
 split <- opts$splitAt
