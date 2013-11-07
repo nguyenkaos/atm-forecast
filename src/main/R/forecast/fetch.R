@@ -42,59 +42,24 @@ fetch <- function( history.file,
 }
 
 #
-# generates the feature set from the usage history
-#
-generate <- function (history,                   
-                      forecast.to = today() + 30, 
-                      ...) {
-    
-    loginfo ("generating the feature set")
-    features <- history
-    
-    dates (features, ...)
-    paydays (features, forecast.to, ...)
-    holidays (features, forecast.to, ...)
-    localTrends (features, ...)
-    globalTrends (features, ...)
-    lags (features)
-    socialSecurity (features)
-    
-    # validate the feature set
-    validate (features)
-    
-    # TODO - need to re-engineer the events
-    # events (features, ...)    
-    
-    loginfo("completed building feature set with '%s' obs and '%s' features", nrow(features), ncol(features))
-    features
-}
-
-#
 # validates the generated features
 #
 validate <- function (features, ...) {
-    loginfo ("validating the feature set with '%s' obs and '%s' features", nrow(features), ncol(features))
+    loginfo ("validating the feature set")
     
     # tidy up the feature set
     setkeyv (features, c("atm", "trandate"))
     setcolorder (features, neworder = c(2, 1, 3, 4:ncol (features)))
-    
-    # all features must be finite - two exceptions: 'usage' and future 'lags'
-    finite <- is.finite (features[ !is.na(usage) ])
-    if(sum(finite) < length (colnames (features)) - 1) {
-        bad <- paste (names (finite)[!finite], collapse = ", ") 
-        stop (sprintf ("all values must be finite: '%s'", bad))
-    }
 }
 
 #
 # Builds a set of features related to the date.
 #
-dates <- function (features) {
+dates <- function (data) {
     loginfo ("creating date features")
     
     # add date related features
-    features[, `:=`(
+    data [, `:=`(
         atm              = ordered( atm),
         trandate         = as.Date (trandate, format="%m/%d/%Y"),
         quarter          = quarter (trandate),
@@ -114,7 +79,6 @@ dates <- function (features) {
 # data set.
 #
 holidays <- function (features, 
-                      forecast.to,
                       holidays.file = "holidays.csv", 
                       data.dir = "../../resources" ) {
     loginfo ("creating holiday features")
@@ -125,10 +89,6 @@ holidays <- function (features,
                              colClasses=c("Date", "NULL", "character"))
     holidays <- data.table(holidays.raw, key="date")
     holidays.max <- max(holidays$date, na.rm=T)
-    
-    # ensure that the holidays data set is complete
-    if(holidays.max < forecast.to)
-        stop (sprintf ("unable to forecast; holidays data only found up to %s", holidays.max))
     
     # holidays - merge with the features data
     setkeyv(features, c("trandate", "atm"))
@@ -142,7 +102,6 @@ holidays <- function (features,
 # data set.
 #
 paydays <- function (features, 
-                     forecast.to,
                      paydays.file = "paydays.csv",
                      data.dir     = "../../resources") {
     loginfo ("creating payday features")
@@ -156,10 +115,6 @@ paydays <- function (features,
     # create a data.table
     paydays <- data.table(paydays.raw, key="trandate")
     paydays.max <- max(paydays$trandate, na.rm=T)
-    
-    # ensure that the holidays data set is complete
-    if(paydays.max < forecast.to)
-        stop (sprintf ("unable to forecast; paydays data only found up to %s", paydays.max))
     
     # collapse multiple pay/pre/post days into a single row for each (atm,date)
     paydays <- paydays [, list (
@@ -188,7 +143,7 @@ socialSecurity <- function (features,
     
     # create a data table
     ss <- data.table (ss.raw, social.security = TRUE, key = "date")
-
+    
     # add in the social security pay dates
     setkeyv (features, c("trandate"))
     features [ss, social.security := social.security]
@@ -228,133 +183,112 @@ events <- function (features,
     return(features)
 }
 
+rollingTrendBy <- function(name, by, history) {
+    loginfo("creating rolling trend by (%s)", eval(by))
+    
+    # calculate the trend **WITH TRAINING DATA ONLY**
+    trend <- history [ 
+        train == 1, 
+        list ( 
+            t.mean = mean.finite (usage),
+            t.min  = min.finite (usage),
+            t.max  = max.finite (usage),
+            t.sd   = sd.finite (usage)
+        ), by = by ]
+    setkeyv(trend, eval(by))
+    
+    # merge the trend with the training data
+    setkeyv(history, eval(by))
+    history [trend, `:=` (mean = t.mean, min = t.min, max = t.max, sd = t.sd)]
+    
+    # create unique names for the trend's components
+    setnames(history, "mean", paste(name, "mean", sep = "."))
+    setnames(history, "min", paste(name, "min", sep = "."))
+    setnames(history, "max", paste(name, "max", sep = "."))
+    setnames(history, "sd", paste(name, "sd", sep = "."))
+}
+
 #
 # adds a mean, min, max, sd to represent a trend by various groupings.
 #
-localTrends <- function (data) {
+rollingTrends <- function (history) {
     
-    loginfo ("creating trend by (atm, week.of.year)")
-    data[,`:=`( woy.mean = mean.finite(usage),
-                woy.min = min.finite(usage),
-                woy.max = max.finite(usage),
-                woy.sd = sd.finite(usage)),
-         by = list (atm, week.of.year)]
-    
-    loginfo ("creating trend by (atm, month.of.year)")
-    data[,`:=`( moy.mean = mean.finite(usage),
-                moy.min = min.finite(usage),
-                moy.max = max.finite(usage),
-                moy.sd = sd.finite(usage)),
-         by = list (atm, month.of.year)]   
-    
-    loginfo ("creating trend by (atm, day.of.week)")
-    data[,`:=`( dow.mean = mean.finite(usage),
-                dow.min = min.finite(usage),
-                dow.max = max.finite(usage),
-                dow.sd = sd.finite(usage)),
-         by = list (atm, day.of.week)]  
-    
-    loginfo ("creating trend by (atm, week.of.month)")
-    data[,`:=`( wom.mean = mean.finite(usage),
-                wom.min = min.finite(usage),
-                wom.max = max.finite(usage),
-                wom.sd = sd.finite(usage)),
-         by = list (atm, week.of.month)]  
-    
-    loginfo ("creating trend by (atm, quarter)")
-    data[,`:=`( qua.mean = mean.finite(usage),
-                qua.min = min.finite(usage),
-                qua.max = max.finite(usage),
-                qua.sd = sd.finite(usage)),
-         by = list (atm, quarter)] 
-    
-    loginfo ("creating trend by (atm, holiday)")
-    data[,`:=`( hol.mean = mean.finite(usage),
-                hol.min = min.finite(usage),
-                hol.max = max.finite(usage),
-                hol.sd = sd.finite(usage)),
-         by = list (atm, holiday)] 
-    
-    loginfo ("creating trend by (atm, payday)")
-    data[,`:=`( pay.mean = mean.finite(usage),
-                pay.min = min.finite(usage),
-                pay.max = max.finite(usage),
-                pay.sd = sd.finite(usage)),
-         by = list (atm, payday)]         
+    # rolling trends specific to each ATM
+    rollingTrendBy ("woy", by = quote (c("atm", "week.of.year")), history)
+    rollingTrendBy ("moy", by = quote (c("atm", "month.of.year")), history)
+    rollingTrendBy ("dow", by = quote (c("atm", "day.of.week")), history)
+    rollingTrendBy ("wom", by = quote (c("atm", "week.of.month")), history)
+    rollingTrendBy ("qua", by = quote (c("atm", "quarter")), history)
+    rollingTrendBy ("hol", by = quote (c("atm", "holiday")), history)
+    rollingTrendBy ("pay", by = quote (c("atm", "payday")), history)
+
 }    
 
 #
-# adds a mean, min, max, sd to represent a trend by various groupings.
+# transposes recent history from a time series to a fixed width form that
+# can be used for machine learning.  since forecast is at a minimum 2 weeks
+# out
 #
-globalTrends <- function (data) {
-    
-    loginfo ("creating trend by week.of.year")
-    data[,`:=`( woy.all.mean = mean.finite(usage),
-                woy.all.min = min.finite(usage),
-                woy.all.max = max.finite(usage),
-                woy.all.sd = sd.finite(usage)),
-         by = week.of.year]   
-    
-    loginfo ("creating trend by month.of.year")
-    data[,`:=`( moy.all.mean = mean.finite(usage),
-                moy.all.min = min.finite(usage),
-                moy.all.max = max.finite(usage),
-                moy.all.sd = sd.finite(usage)),
-         by = month.of.year]   
-    
-    loginfo ("creating trend by day.of.week")
-    data[,`:=`( dow.all.mean = mean.finite(usage),
-                dow.all.min = min.finite(usage),
-                dow.all.max = max.finite(usage),
-                dow.all.sd = sd.finite(usage)),
-         by = day.of.week]   
-    
-    loginfo ("creating trend by week.of.month")
-    data[,`:=`( wom.all.mean = mean.finite(usage),
-                wom.all.min = min.finite(usage),
-                wom.all.max = max.finite(usage),
-                wom.all.sd = sd.finite(usage)),
-         by = week.of.month]   
-    
-    loginfo ("creating trend by quarter")
-    data[,`:=`( qua.all.mean = mean.finite(usage),
-                qua.all.min = min.finite(usage),
-                qua.all.max = max.finite(usage),
-                qua.all.sd = sd.finite(usage)),
-         by = quarter]   
-    
-    loginfo ("creating trend by holiday")
-    data[,`:=`( hol.all.mean = mean.finite(usage),
-                hol.all.min = min.finite(usage),
-                hol.all.max = max.finite(usage),
-                hol.all.sd = sd.finite(usage)),
-         by = holiday]   
-    
-    loginfo ("creating trend by payday")
-    data[,`:=`( pay.all.mean = mean.finite(usage),
-                pay.all.min = min.finite(usage),
-                pay.all.max = max.finite(usage),
-                pay.all.sd = sd.finite(usage)),
-         by = payday]   
+recentHistory <- function (history) {
+    recentHistoryBy (history, "dow", quote (c ("atm", "day.of.week")))
+    recentHistoryBy (history, "wom", quote (c ("atm", "week.of.month")))
+    recentHistoryBy (history, "hol", quote (c ("atm", "holiday")))
+    recentHistoryBy (history, "pay", quote (c ("atm", "payday")))
+    recentHistoryBy (history, "soc", quote (c ("atm", "social.security")))
 }
 
 #
-# calculates the lagged differences (change in usage) between different 
-# intervals.  the intervals can be from one Monday to the next, from one 
-# week to the next, from one quarter to the next, etc
+# shifts a vector over 'n' slots and back-fills with NAs
 #
-lags <- function (data) {
-    loginfo ("creating lagged differences")
-    
-    data [, lags.qua := c(0, diff (usage)), by = "quarter" ]
-    data [, lags.moy := c(0, diff (usage)), by = "month.of.year" ]
-    data [, lags.doy := c(0, diff (usage)), by = "day.of.year" ]
-    data [, lags.dos := c(0, diff (usage)), by = "day.of.semi.year" ]
-    data [, lags.doq := c(0, diff (usage)), by = "day.of.quarter" ]
-    data [, lags.dom := c(0, diff (usage)), by = "day.of.month" ]
-    data [, lags.dow := c(0, diff (usage)), by = "day.of.week" ]
-    data [, lags.woy := c(0, diff (usage)), by = "week.of.year" ]
-    data [, lags.wom := c(0, diff (usage)), by = "week.of.month" ]
-    data [, lags.pay := c(0, diff (usage)), by = "payday" ]
-    data [, lags.hol := c(0, diff (usage)), by = "holiday" ]
+shift = function(vec, n) { 
+    nas.to.add <- min(n, length(vec))
+    c(rep (NA, nas.to.add), head (vec, -n))
 }
+
+#
+# adds the previous 7 values of usage by some given period.  for example, if by = 
+# c("atm", "day.of.week") a particular observation will be amended with the usage
+# values for the previous 7 similar week days.  if the observation is for a Monday,
+# then the most recent 7 Mondays will be added.
+#
+recentHistoryBy <- function (history, name, by) {
+    loginfo("creating recent history by (%s)", eval(by))
+    
+    history [, `:=` (
+        prev.1 = shift (usage, 1),
+        prev.2 = shift (usage, 2),
+        prev.3 = shift (usage, 3),
+        prev.4 = shift (usage, 4),
+        prev.5 = shift (usage, 5),
+        prev.6 = shift (usage, 6),
+        prev.7 = shift (usage, 7)
+    ), by = by ]
+    
+    # calculate the column means
+    mean.prev.1 = mean (history$prev.1, na.rm = T)
+    mean.prev.2 = mean (history$prev.2, na.rm = T)
+    mean.prev.3 = mean (history$prev.3, na.rm = T)
+    mean.prev.4 = mean (history$prev.4, na.rm = T)
+    mean.prev.5 = mean (history$prev.5, na.rm = T)
+    mean.prev.6 = mean (history$prev.6, na.rm = T)
+    mean.prev.7 = mean (history$prev.7, na.rm = T)
+    
+    # replace all NAs with the column mean
+    history [ is.na(prev.1), prev.1 := mean.prev.1, ]
+    history [ is.na(prev.2), prev.2 := mean.prev.2, ]
+    history [ is.na(prev.3), prev.3 := mean.prev.3, ]
+    history [ is.na(prev.4), prev.4 := mean.prev.4, ]
+    history [ is.na(prev.5), prev.5 := mean.prev.5, ]
+    history [ is.na(prev.6), prev.6 := mean.prev.6, ]
+    history [ is.na(prev.7), prev.7 := mean.prev.7, ]
+    
+    # create unique names for the trend's components
+    setnames(history, "prev.1", paste(name, "usage.prev.1", sep = "."))
+    setnames(history, "prev.2", paste(name, "usage.prev.2", sep = "."))
+    setnames(history, "prev.3", paste(name, "usage.prev.3", sep = "."))
+    setnames(history, "prev.4", paste(name, "usage.prev.4", sep = "."))
+    setnames(history, "prev.5", paste(name, "usage.prev.5", sep = "."))
+    setnames(history, "prev.6", paste(name, "usage.prev.6", sep = "."))
+    setnames(history, "prev.7", paste(name, "usage.prev.7", sep = "."))
+}
+

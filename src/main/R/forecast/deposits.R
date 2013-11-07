@@ -29,7 +29,7 @@ getOptions <- function() {
                      action  = "store_true"),
         make_option (c("--verbose"),
                      help    = "The verbosity of the champion/challenger comparison [default: %default]",
-                     default = FALSE,
+                     default = TRUE,
                      action  = "store_true")
     )
     opts <- parse_args (OptionParser (option_list = all_options))
@@ -49,6 +49,7 @@ library("Metrics")
 library("caretEnsemble")
 
 # other project sources
+source("../common/parallel.R")
 source("../common/cache.R")
 source("../common/utils.R")
 source("fetch.R")
@@ -59,16 +60,16 @@ source("deposits-models.R")
 # initialization
 options (warn = 0)
 basicConfig (level = loglevels [opts$logLevel])
-split.at <- opts$splitAt
 data.id <- basename.only (opts$historyFile)
+split <- opts$splitAt
 
 # generate the features, build the champion and challengers, and combine them for scoring
-f <- buildFeatures()
-models <- combine( split.at, list (champion (f, split.at), 
-                                   challenger (f, split.at)))
+f <- buildFeatures (split)
+models <- combine (split, list (champion (f, split), 
+                                challenger (f)))
 
 # score by model
-models <- models [is.finite(usage)]
+models <- models [is.finite (usage)]
 scoreBy (models,
          by          = quote (list (model)),
          min.date    = "2013-08-01",
@@ -78,17 +79,17 @@ scoreBy (models,
 # should a detailed score be produced?
 if (opts$verbose) {
     
-    # score the models by atm
+    # score by atm
     scoreBy (models,
              by          = quote (list (model, atm)),
-             min.date    = "2013-09-01",
+             min.date    = "2013-08-01",
              max.date    = "2013-09-30",
              export.file = sprintf("%s-score-by-atm.csv", data.id))
     
-    # score the models by atm-date
+    # score by atm-day
     scoreBy (models, 
              by          = quote (list (model, atm, trandate)), 
-             min.date    = "2013-09-01",
+             min.date    = "2013-08-01",
              max.date    = "2013-09-30",
              export.file = sprintf("%s-score-by-atm-date.csv", data.id))
 }
