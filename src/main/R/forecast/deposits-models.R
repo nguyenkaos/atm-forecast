@@ -96,11 +96,6 @@ trainThenPredict <- function (by,
             list (x = train.x, y = train.y, trControl = ctrl, method = "glmboost"),
             list (x = train.x, y = train.y, trControl = ctrl, method = "lasso"),
             list (x = train.x, y = train.y, trControl = ctrl, method = "leapForward", warn.dep = F)
-            #list (x = train.x, y = train.y, trControl = ctrl, method = "glmnet"),
-            #list (x = train.x, y = train.y, trControl = ctrl, method = "earth"),
-            #list (x = train.x, y = train.y, trControl = ctrl, method = "svmRadial"), 
-            #list (x = train.x, y = train.y, trControl = ctrl, method = "leapBackward", warn.dep = F),
-            #list (x = train.x, y = train.y, trControl = ctrl, method = "nnet", trace = F)
         )
         
         # train each of the challengers; ignore any training failures
