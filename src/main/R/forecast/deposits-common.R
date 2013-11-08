@@ -48,7 +48,7 @@ buildFeatures <- function (split.at     = opts$splitAt,
 # compare the champion and challenger models.combined
 #
 combine <- function (compare.start, list.of.models) {
-    loginfo("combining '%s' models", length(list.of.models))
+    logdebug("combining '%s' models", length(list.of.models))
     
     # clean-up  all of the challengers data
     list.of.models <- lapply (list.of.models, function (m) m [trandate > compare.start] )

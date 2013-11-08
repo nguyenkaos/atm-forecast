@@ -14,7 +14,7 @@ fetch <- function( history.file,
                    forecast.to   = today() + 30,
                    data.dir      = "../../resources") {
     
-    loginfo ("fetching historical usage data")
+    logdebug ("fetching historical usage data")
     
     # fetch the history of ATM usage; days with 0 volume are missing
     history.path <- sprintf ("%s/%s", data.dir, history.file)
@@ -56,7 +56,7 @@ validate <- function (features, ...) {
 # Builds a set of features related to the date.
 #
 dates <- function (data) {
-    loginfo ("creating date features")
+    logdebug ("creating date features")
     
     # add date related features
     data [, `:=`(
@@ -81,7 +81,7 @@ dates <- function (data) {
 holidays <- function (features, 
                       holidays.file = "holidays.csv", 
                       data.dir = "../../resources" ) {
-    loginfo ("creating holiday features")
+    logdebug ("creating holiday features")
     
     # grab the raw holidays data
     holidays.raw <- read.csv(sprintf("%s/%s", data.dir, holidays.file),
@@ -104,7 +104,7 @@ holidays <- function (features,
 paydays <- function (features, 
                      paydays.file = "paydays.csv",
                      data.dir     = "../../resources") {
-    loginfo ("creating payday features")
+    logdebug ("creating payday features")
     
     # read the paydays data
     paydays.path <- sprintf("%s/%s", data.dir, paydays.file)
@@ -135,7 +135,7 @@ paydays <- function (features,
 socialSecurity <- function (features, 
                             ss.file = "social-security.csv",
                             data.dir = "../../resources") {
-    loginfo("creating social security payment features")
+    logdebug ("creating social security payment features")
     
     # read the social security data
     ss.path <- sprintf ("%s/%s", data.dir, ss.file)
@@ -160,7 +160,7 @@ events <- function (features,
                     events.file = "events.csv",
                     data.dir    = "../../resources") {
     
-    loginfo ("creating event features")
+    logdebug ("creating event features")
     
     # events - clean the data gathered from stub hub
     events.raw <- read.csv(sprintf("%s/%s", data.dir, events.file),
