@@ -10,7 +10,7 @@ champion <- function (features,
     
     # we are only interested in those atm-days in the feature set
     champion <- champion [ 
-        features [ trandate > as.Date(split.at) & is.finite(usage) ],
+        features [ trandate > as.Date(split.at) ], # & is.finite(usage) ],
         list (
             usage,
             usage.hat,
@@ -143,7 +143,7 @@ challenger <- function (features,
         
         features[
             # include only those ATMs that pass the 'subset' expression
-            eval (parse (text = subset)) & !is.na(usage),
+            eval (parse (text = subset)), # & !is.na(usage),
             
             # train and fit a model
             list (
@@ -155,5 +155,5 @@ challenger <- function (features,
             
             # training occurs independently for each ATM
             by = atm ] 
-    })
+    }, cache.ignore = T)
 }

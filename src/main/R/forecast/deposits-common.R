@@ -97,23 +97,19 @@ scoreBy <- function (models, by, min.date = -Inf, max.date = Inf, export.file = 
 #
 # export each of the challenger's forecast to a CSV.
 #
-export <- function (models, export.id, min.date = -Inf, max.date = Inf) {
+export <- function (models, model.name, data.id, min.date = -Inf, max.date = Inf) {
     
     # export the forecast for each model
     forecast <- models [
-        trandate >= min.date & trandate <= max.date, 
+        model == model.name & trandate >= min.date & trandate <= max.date, 
         list (
             atm       = atm, 
             trandate  = trandate,
             usage.hat = usage.hat
-        ), 
-        by = model]
+        )]
     
     # export each forecast to a csv file
-    forecast [
-        , list(
-            filename <- sprintf("%s-%s-forecast.csv", model, export.id),
-            write.csv (forecast, filename),
-            loginfo ("forecast exported to %s", filename)  
-        ), by = model ]
+    file.name <- sprintf("%s-%s-forecast.csv", data.id, model.name)
+    write.csv (forecast, file.name, row.names = F)
+    loginfo ("forecast exported to %s", file.name)      
 }

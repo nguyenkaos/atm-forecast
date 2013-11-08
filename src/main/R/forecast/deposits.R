@@ -61,7 +61,7 @@ score.min.date <- "2013-08-01"
 score.max.date <- "2013-09-30"
 
 # initialization
-options (warn = 1)
+options (warn = 0)
 basicConfig (level = loglevels [opts$logLevel])
 data.id <- basename.only (opts$historyFile)
 split <- opts$splitAt
@@ -71,7 +71,7 @@ f <- buildFeatures (split)
 models <- combine (split, list (champion (f, split), challenger (f)))
 
 # score by model
-models <- models [is.finite (usage)]
+#models <- models [is.finite (usage)]
 scoreBy (models, by = quote (list (model)), score.min.date, score.max.date) []
 
 # should a detailed score be produced and exported?
@@ -101,6 +101,6 @@ if (opts$verbose) {
 
 # should the forecast be exported?
 if (opts$export) {
-    export (models, data.id, min.date = today())
+    export (models, "challenger", data.id, score.min.date)
 }
 
