@@ -38,18 +38,18 @@ trainThenPredict <- function (by,
     data.y <- model.response (frame)
     data.x <- model.matrix (formula, frame)
     
+    # additional pre-processing to prepare for training
+    pre <- preProcess (data.x, method = c("center", "scale")) 
+    data.x <- predict (pre, data.x)
+    
     # cache the trained model
-    fit.cache <- sprintf ("%s-%s", data.id, by)
+    fit.cache <- sprintf ("%s-challenger-%s", data.id, by)
     fit <- cache (fit.cache, {
         loginfo("%s: pre-processing: [%s x %s]", by, nrow(data), ncol(data))
         
         # remove features that are highly correlated or with little/no variance
         data.x <- data.x[, -nearZeroVar(data.x)]
         data.x <- data.x[, -findCorrelation(data.x)]
-        
-        # additional pre-processing to prepare for training
-        pre <- preProcess (data.x, method = c("center", "scale")) 
-        data.x <- predict (pre, data.x)
         
         # split the training and test data
         train.x <- data.x [ train.index, ]
@@ -74,7 +74,7 @@ trainThenPredict <- function (by,
             savePredictions = TRUE,
             allowParallel   = TRUE,
             index           = createMultiFolds (train.y, k = 5, times = 1))
-            #predictionBounds = c(0, max.prediction)
+        #predictionBounds = c(0, max.prediction)
         
         # define each of the challenger models
         challengers.def <- list ( 
@@ -124,22 +124,18 @@ challenger <- function (features,
                         subset    = opts$subset, 
                         data.id   = basename.only (opts$historyFile)) {
     
-    challenger.cache <- sprintf ("%s-challenger", data.id)
-    challenger <- cache (challenger.cache, {
+    features [
+        # include only those ATMs that pass the 'subset' expression
+        eval (parse (text = subset)),
         
-        features[
-            # include only those ATMs that pass the 'subset' expression
-            eval (parse (text = subset)),
-            
-            # train and fit a model
-            list (
-                trandate,
-                usage,
-                usage.hat = trainThenPredict (.BY, .SD, challenger.cache),
-                model = "challenger"
-            ),
-            
-            # training occurs independently for each ATM
-            by = atm ] 
-    }, cache.ignore = T)
+        # train and fit a model
+        list (
+            trandate,
+            usage,
+            usage.hat = trainThenPredict (.BY, .SD, data.id),
+            model = "challenger"
+        ),
+        
+        # training occurs independently for each ATM
+        by = atm ] 
 }
