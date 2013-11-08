@@ -1,3 +1,10 @@
+library("caret")
+library("data.table")
+library("logging")
+library("foreach")
+library("Metrics")
+library("caretEnsemble")
+
 #
 # fetch the current champion model
 #
@@ -94,22 +101,20 @@ trainThenPredict <- function (by,
     })
     
     # log information about the trained model
-    w <- sort (fit$weights, decreasing = TRUE)
-    loginfo("%s: ensemble chosen with rmse: %.2f models: %s", by, fit$error,  paste (names (w), w, sep = ":", collapse=", "))
+    logdebug ("%s: ensemble chosen with rmse: %.2f models: %s", by, fit$error, format.wide (sort (fit$weights, decreasing = T)))
     
     # extract only the features used to train the model
-    features <- fit$models[[1]]$finalModel$xNames
-    data.x <- data.x [, features]
+    feature.names <- fit$models[[1]]$finalModel$xNames
+    data.x <- data.x [, feature.names]
     
     # make a prediction - predict for all test/train
     loginfo("%s: predicting: [%s x %s]", by, nrow (data.x), ncol (data.x))
-    prediction <- tryCatch ({
-        round (predict (fit, newdata = data.x))
-        
-    }, error = function(e) {
-        logerror("%s: prediction error; %s; using default: %s", by, e, default.predict)
-        return (default.predict)
-    })
+    prediction <- getOrElse( round (predict (fit, newdata = data.x)), default.predict)
+    
+    # log for posterity
+    logdebug("%s: predictions: %s", by, format.wide (summary (prediction)))
+    
+    return (prediction)
 }
 
 #

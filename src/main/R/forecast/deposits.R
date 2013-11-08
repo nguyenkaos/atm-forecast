@@ -1,8 +1,7 @@
 #!/usr/bin/env Rscript
 
-library("optparse")
-
 # defines the options/arguments
+library("optparse")
 getOptions <- function() {
     
     # define all of the command-line options
@@ -49,17 +48,6 @@ getOptions <- function() {
 # gather the command line options
 opts <- getOptions()
 
-# required libraries
-library("plyr")
-library("caret")
-library("data.table")
-library("lubridate")
-library("logging")
-library("foreach")
-library("Metrics")
-library("caretEnsemble")
-
-# other project sources
 #source("../common/parallel.R")
 source("../common/cache.R")
 source("../common/utils.R")

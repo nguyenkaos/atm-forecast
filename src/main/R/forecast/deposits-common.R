@@ -1,3 +1,6 @@
+library("data.table")
+library("logging")
+
 #
 # create the feature set
 #

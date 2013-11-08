@@ -1,5 +1,6 @@
 
 library("lubridate")
+library("logging")
 
 source("../common/cache.R")
 source("../common/utils.R")
@@ -184,7 +185,7 @@ events <- function (features,
 }
 
 rollingTrendBy <- function(name, by, history) {
-    loginfo("creating rolling trend by (%s)", eval(by))
+    logdebug ("creating rolling trend by (%s)", eval(by))
     
     # calculate the trend **WITH TRAINING DATA ONLY**
     trend <- history [ 
@@ -252,7 +253,7 @@ shift = function(vec, n) {
 # then the most recent 7 Mondays will be added.
 #
 recentHistoryBy <- function (history, name, by) {
-    loginfo("creating recent history by (%s)", eval(by))
+    logdebug ("creating recent history by (%s)", eval (by))
     
     history [, `:=` (
         prev.1 = shift (usage, 1),
