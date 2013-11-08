@@ -4,6 +4,7 @@ library("logging")
 library("foreach")
 library("Metrics")
 library("caretEnsemble")
+library("plyr")
 
 #
 # fetch the current champion model
