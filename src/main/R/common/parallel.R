@@ -4,10 +4,9 @@
 #
 
 # parallel backend for UNIX
-library("doMC")
-registerDoMC()
+#library("doMC")
+#registerDoMC()
 
 # parallel backend for Windows
-#library("parallel")
-#cl <- makeCluster(detectCores())
-#stopCluster(cl)
+library("doParallel")
+registerDoParallel(cores = detectCores())
