@@ -17,7 +17,7 @@ champion <- function (features,
     
     # we are only interested in those atm-days in the feature set
     champion <- champion [ 
-        features [ trandate > as.Date(split.at) ], # & is.finite(usage) ],
+        features [ trandate > as.Date(split.at) ],
         list (
             usage,
             usage.hat,
@@ -28,27 +28,15 @@ champion <- function (features,
 }
 
 #
-# train the challenger and make a prediction for a specific ATM
+# train the model
 #
-trainThenPredict <- function (by,
-                              data, 
-                              data.id,
-                              formula = usage ~ . -1 -train,
-                              default.predict = 0,
-                              max.prediction = 6000) {
-    by <- by[[1]]
-    
-    train.index <- which (data[["train"]] == 1)
-    
-    # create the design matrix
-    frame <- model.frame (formula, data, na.action = NULL)
-    data.y <- model.response (frame)
-    data.x <- model.matrix (formula, frame)
+deposits.train <- function (by, data.x, data.y, train.index, data.id) {
     
     # cache the trained model
     fit.cache <- sprintf ("%s-challenger-%s", data.id, by)
     fit <- cache (fit.cache, {
-        loginfo("%s: pre-processing: [%s x %s]", by, nrow(data), ncol(data))
+        
+        loginfo("%s: pre-processing: [%s x %s]", by, nrow(data.x), ncol(data.x))
         
         # remove features that are highly correlated or with little/no variance
         data.x <- data.x[, -nearZeroVar(data.x)]
@@ -100,21 +88,46 @@ trainThenPredict <- function (by,
         fit <- caretEnsemble (challengers, iter = 1000L)
     })
     
-    # log information about the trained model
     logdebug ("%s: ensemble chosen with rmse: %.2f models: %s", by, fit$error, format.wide (sort (fit$weights, decreasing = T)))
+    return (fit)
+}
+
+#
+# makes predictions based on a fitted model
+#
+deposits.predict <- function (by, fit, data.x, default.predict = 0) {
     
     # extract only the features used to train the model
     feature.names <- fit$models[[1]]$finalModel$xNames
     data.x <- data.x [, feature.names]
     
     # make a prediction - predict for all test/train
-    loginfo("%s: predicting: [%s x %s]", by, nrow (data.x), ncol (data.x))
     prediction <- getOrElse( round (predict (fit, newdata = data.x)), default.predict)
-    
-    # log for posterity
-    logdebug("%s: predictions: %s", by, format.wide (summary (prediction)))
+    loginfo("%s: prediction: [%s x %s]: %s", by, nrow (data.x), ncol (data.x), format.wide (summary (prediction)))
     
     return (prediction)
+}
+
+#
+# train the challenger and make a prediction for a specific ATM
+#
+trainThenPredict <- function (by,
+                              data, 
+                              data.id,
+                              formula = usage ~ . -1 -train ) {
+    by <- by[[1]]
+    train.index <- which (data[["train"]] == 1)
+    
+    # create the design matrix
+    frame <- model.frame (formula, data, na.action = NULL)
+    data.y <- model.response (frame)
+    data.x <- model.matrix (formula, frame)
+    
+    # train and predict
+    fit <- deposits.train (by, data.x, data.y, train.index, data.id)
+    pred <- deposits.predict (by, fit, data.x)
+    
+    return (pred)
 }
 
 #
