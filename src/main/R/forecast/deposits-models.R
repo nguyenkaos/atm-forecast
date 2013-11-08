@@ -34,9 +34,9 @@ trainThenPredict <- function (by,
     train.index <- which (data[["train"]] == 1)
     
     # create the design matrix
-    frame <- model.frame(formula, data, na.action = NULL)
-    data.y <- model.response(frame)
-    data.x <- model.matrix(formula, frame)
+    frame <- model.frame (formula, data, na.action = NULL)
+    data.y <- model.response (frame)
+    data.x <- model.matrix (formula, frame)
     
     # cache the trained model
     fit.cache <- sprintf ("%s-%s", data.id, by)
@@ -48,8 +48,8 @@ trainThenPredict <- function (by,
         data.x <- data.x[, -findCorrelation(data.x)]
         
         # additional pre-processing to prepare for training
-        pre <- preProcess(data.x, method = c("center", "scale")) 
-        data.x <- predict(pre, data.x)
+        pre <- preProcess (data.x, method = c("center", "scale")) 
+        data.x <- predict (pre, data.x)
         
         # split the training and test data
         train.x <- data.x [ train.index, ]
@@ -59,7 +59,7 @@ trainThenPredict <- function (by,
         
         # if no training data, or training response all 0s then don't train
         loginfo("%s: training: [%s x %s]", by, nrow(train.x), ncol(train.x))
-        if (nrow (train.x) <= 0 || all(train.y == 0)) {
+        if (nrow (train.x) <= 0 || all (train.y == 0)) {
             return (NULL)
         }
         
@@ -73,8 +73,8 @@ trainThenPredict <- function (by,
             returnData      = FALSE, 
             savePredictions = TRUE,
             allowParallel   = TRUE,
-            #predictionBounds = c(0, max.prediction),
-            index = createMultiFolds (train.y, k = 5, times = 1))
+            index           = createMultiFolds (train.y, k = 5, times = 1))
+            #predictionBounds = c(0, max.prediction)
         
         # define each of the challenger models
         challengers.def <- list ( 
@@ -85,8 +85,8 @@ trainThenPredict <- function (by,
         )
         
         # train each of the challengers; ignore any training failures
-        challengers <- lapply (challengers.def, function(args) {
-            tryCatch( do.call(train, args), 
+        challengers <- lapply (challengers.def, function (args) {
+            tryCatch( do.call (train, args), 
                       error = function(e) logwarn("%s: training error encountered: %s", by, e))  
         })
         
@@ -98,15 +98,15 @@ trainThenPredict <- function (by,
     })
     
     # log information about the trained model
-    w <- sort(fit$weights, decreasing = TRUE)
-    loginfo("%s: ensemble chosen with rmse: %.2f models: %s", by, fit$error,  paste (names(w), w, sep = ":", collapse=", "))
+    w <- sort (fit$weights, decreasing = TRUE)
+    loginfo("%s: ensemble chosen with rmse: %.2f models: %s", by, fit$error,  paste (names (w), w, sep = ":", collapse=", "))
     
     # extract only the features used to train the model
     features <- fit$models[[1]]$finalModel$xNames
-    data.x <- data.x[, features]
+    data.x <- data.x [, features]
     
     # make a prediction - predict for all test/train
-    loginfo("%s: predicting: [%s x %s]", by, nrow (data.x), ncol(data.x))
+    loginfo("%s: predicting: [%s x %s]", by, nrow (data.x), ncol (data.x))
     prediction <- tryCatch ({
         round (predict (fit, newdata = data.x))
         
@@ -121,15 +121,15 @@ trainThenPredict <- function (by,
 # and scaling of the 
 #
 challenger <- function (features, 
-                        subset = opts$subset, 
-                        data.id = basename.only (opts$historyFile)) {
+                        subset    = opts$subset, 
+                        data.id   = basename.only (opts$historyFile)) {
     
     challenger.cache <- sprintf ("%s-challenger", data.id)
     challenger <- cache (challenger.cache, {
         
         features[
             # include only those ATMs that pass the 'subset' expression
-            eval (parse (text = subset)), # & !is.na(usage),
+            eval (parse (text = subset)),
             
             # train and fit a model
             list (

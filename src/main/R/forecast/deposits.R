@@ -4,34 +4,45 @@ library("optparse")
 
 # defines the options/arguments
 getOptions <- function() {
+    
+    # define all of the command-line options
     all_options <- list(
         make_option (c("--forecastOut"),
                      help    = "How far out to forecast in days [default: %default]",
                      default = 120),
+        
         make_option (c("--splitAt"),
                      help    = "Date at which to split training vs test [default: %default]",
                      default = "2013-07-16"),
+        
         make_option (c("-l", "--logLevel"),
                      help    = "Level of logging [default: %default]",
                      default = "INFO"),  
+        
         make_option (c("--subset"),
                      help    = "An expression to identify a subset of ATMs to forecast [default: %default (all)]",
                      default = "T==T"),
+        
         make_option (c("-d", "--dataDir"),
                      help    = "Directory containing the data files [default: %default]",
                      default = "../../resources"),
+        
         make_option (c("--historyFile"), 
                      help    = "RDS file containing the ATM history [default: %default]",
                      default = "deposits-micro.rds"),
+        
         make_option (c("e", "--export"),
                      help    = "Export the forecast [default: %default]",
                      default = FALSE,
                      action  = "store_true"),
+        
         make_option (c("--verbose"),
                      help    = "The verbosity of the champion/challenger comparison [default: %default]",
                      default = FALSE,
                      action  = "store_true")
     )
+    
+    # parse the command-line
     opts <- parse_args (OptionParser (option_list = all_options))
 }
 
@@ -49,7 +60,7 @@ library("Metrics")
 library("caretEnsemble")
 
 # other project sources
-source("../common/parallel.R")
+#source("../common/parallel.R")
 source("../common/cache.R")
 source("../common/utils.R")
 source("fetch.R")
@@ -71,7 +82,6 @@ f <- buildFeatures (split)
 models <- combine (split, list (champion (f, split), challenger (f)))
 
 # score by model
-#models <- models [is.finite (usage)]
 scoreBy (models, by = quote (list (model)), score.min.date, score.max.date) []
 
 # should a detailed score be produced and exported?
