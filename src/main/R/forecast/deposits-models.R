@@ -27,7 +27,7 @@ trainThenPredict <- function (by,
                               data, 
                               data.id,
                               formula = usage ~ . -1 -train,
-                              default.predict = 0.0,
+                              default.predict = 0,
                               max.prediction = 6000) {
     by <- by[[1]]
     
@@ -37,10 +37,6 @@ trainThenPredict <- function (by,
     frame <- model.frame (formula, data, na.action = NULL)
     data.y <- model.response (frame)
     data.x <- model.matrix (formula, frame)
-    
-    # additional pre-processing to prepare for training
-    pre <- preProcess (data.x, method = c("center", "scale")) 
-    data.x <- predict (pre, data.x)
     
     # cache the trained model
     fit.cache <- sprintf ("%s-challenger-%s", data.id, by)
@@ -78,15 +74,15 @@ trainThenPredict <- function (by,
         
         # define each of the challenger models
         challengers.def <- list ( 
-            list (x = train.x, y = train.y, trControl = ctrl, method = "gbm", verbose = F, keep.data = T),
-            list (x = train.x, y = train.y, trControl = ctrl, method = "glmboost"),
-            list (x = train.x, y = train.y, trControl = ctrl, method = "lasso"),
-            list (x = train.x, y = train.y, trControl = ctrl, method = "leapForward", warn.dep = F)
+            list (x = train.x, y = train.y, trControl = ctrl, preProc = c("center", "scale"), method = "gbm", verbose = F, keep.data = T),
+            list (x = train.x, y = train.y, trControl = ctrl, preProc = c("center", "scale"), method = "glmboost"),
+            list (x = train.x, y = train.y, trControl = ctrl, preProc = c("center", "scale"), method = "lasso"),
+            list (x = train.x, y = train.y, trControl = ctrl, preProc = c("center", "scale"), method = "leapForward", warn.dep = F)
         )
         
         # train each of the challengers; ignore any training failures
         challengers <- lapply (challengers.def, function (args) {
-            tryCatch( do.call (train, args), 
+            tryCatch( do.call (caret::train, args), 
                       error = function(e) logwarn("%s: training error encountered: %s", by, e))  
         })
         
