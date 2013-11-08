@@ -113,3 +113,17 @@ export <- function (models, model.name, data.id, min.date = -Inf, max.date = Inf
     write.csv (forecast, file.name, row.names = F)
     loginfo ("forecast exported to %s", file.name)      
 }
+
+#
+# jumps through some extra hoops like replacing NAs
+#
+findCorrelation <- function(x, use = "pairwise.complete.obs", ...) {
+    
+    # generate a correlation matrix with no NAs
+    cor.mx <- cor (x, use = use)
+    cor.mx [is.na(cor.mx)] <- 0
+    
+    # allow caret to do the hard part
+    caret::findCorrelation(cor.mx)
+}
+

@@ -21,20 +21,6 @@ champion <- function (features,
 }
 
 #
-# jumps through some extra hoops like replacing NAs
-#
-findCorrelation <- function(x, use = "pairwise.complete.obs", ...) {
-    
-    # generate a correlation matrix with no NAs
-    cor.mx <- cor (x, use = use)
-    cor.mx [is.na(cor.mx)] <- 0
-    
-    # allow caret to do the hard part
-    caret::findCorrelation(cor.mx)
-}
-
-
-#
 # train the challenger and make a prediction for a specific ATM
 #
 trainThenPredict <- function (by,
