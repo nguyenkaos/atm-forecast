@@ -60,7 +60,7 @@ library("Metrics")
 library("caretEnsemble")
 
 # other project sources
-source("../common/parallel.R")
+#source("../common/parallel.R")
 source("../common/cache.R")
 source("../common/utils.R")
 source("fetch.R")
@@ -111,6 +111,7 @@ if (opts$verbose) {
 
 # should the forecast be exported?
 if (opts$export) {
-    export (models, "challenger", data.id, score.min.date)
+    export.file <- sprintf("%s-challenger-forecast.csv", data.id)
+    export (models, "challenger", data.id, min.date = score.min.date, export.file = export.file)
 }
 

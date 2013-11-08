@@ -57,6 +57,7 @@ combine <- function (compare.start, list.of.models) {
     models.combined <- rbindlist (list.of.models)
     setkeyv (models.combined, c("model", "atm", "trandate"))
     
+    loginfo("combined '%s' models: [%s x %s]", length(list.of.models), nrow(models.combined), ncol(models.combined))
     return (models.combined)
 }
 
@@ -91,13 +92,14 @@ scoreBy <- function (models, by, min.date = -Inf, max.date = Inf, export.file = 
         loginfo ("scores exported to '%s'", export.file)
     }
     
+    logdebug("scored by (%s): [%s x %s]", by, nrow(scores), ncol(scores))
     scores
 }
 
 #
 # export each of the challenger's forecast to a CSV.
 #
-export <- function (models, model.name, data.id, min.date = -Inf, max.date = Inf) {
+export <- function (models, model.name, data.id, min.date = -Inf, max.date = Inf, export.file = NA) {
     
     # export the forecast for each model
     forecast <- models [
@@ -109,9 +111,12 @@ export <- function (models, model.name, data.id, min.date = -Inf, max.date = Inf
         )]
     
     # export each forecast to a csv file
-    file.name <- sprintf("%s-%s-forecast.csv", data.id, model.name)
-    write.csv (forecast, file.name, row.names = F)
-    loginfo ("forecast exported to %s", file.name)      
+    if (!is.na(export.file)) {
+        write.csv (forecast, export.file, row.names = F)
+        loginfo ("forecast exported to %s", export.file)   
+    }
+    
+    return (forecast)
 }
 
 #
