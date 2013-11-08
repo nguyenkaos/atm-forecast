@@ -85,16 +85,24 @@ basename.only <- function (path) {
 #
 getOrElse <- function (expr, default = 0) {
     
-    # protect against any errors
-    val <- try (expr)
+    val <- tryCatch (expr, error = function (e) {})
     
-    # replace any non-finite values
-    val [!is.finite(val)] <- default
-    
-    # this is really ugle, I hate R exception handling
-    if (length(val) > 1 && !is.finite(val)) val <- default
+    if (length(val)) {
+        val [!is.finite(val)] <- default
+    } else { 
+        val <- default
+    }
     
     return (val)
+}
+
+#
+# just like lapply, but will ignore any errors that occur within the function being called.  no results
+# from a failed function will appear in the resulting list
+#
+lapply.ignore <- function(x, fun, ...) {
+    result <- lapply(x, failwith(NULL, fun), ...)
+    result [ unlist(lapply (result, length) != 0) ]
 }
 
 #
