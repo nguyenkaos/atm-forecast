@@ -54,18 +54,22 @@ deposits.train <- function (by, data.x, data.y, train.index, data.id) {
             return (NULL)
         }
         
+        # throw some bounds around the predictions
+        min.prediction <- 0
+        max.prediction <- mean(train.x) + 3 * sd(train.y)
+        
         # define how tuning of the models should occur
         ctrl <- trainControl (
-            method          = "repeatedcv",
-            number          = 5, 
-            repeats         = 3,
-            returnResamp    = "none", 
-            classProbs      = TRUE,
-            returnData      = FALSE, 
-            savePredictions = TRUE,
-            allowParallel   = TRUE,
-            index           = createMultiFolds (train.y, k = 5, times = 1))
-        #predictionBounds = c(0, max.prediction)
+            method           = "repeatedcv",
+            number           = 5, 
+            repeats          = 3,
+            returnResamp     = "none", 
+            classProbs       = TRUE,
+            returnData       = FALSE, 
+            savePredictions  = TRUE,
+            allowParallel    = TRUE,
+            predictionBounds = c(min.prediction, max.prediction),
+            index            = createMultiFolds (train.y, k = 5, times = 1))
         
         # define each of the challenger models
         challengers.def <- list ( 
@@ -75,14 +79,9 @@ deposits.train <- function (by, data.x, data.y, train.index, data.id) {
             list (x = train.x, y = train.y, trControl = ctrl, preProc = c("center", "scale"), method = "leapForward", warn.dep = F)
         )
         
-        # train each of the challengers; ignore any training failures
-        challengers <- lapply (challengers.def, function (args) {
-            tryCatch( do.call (caret::train, args), 
-                      error = function(e) logwarn("%s: training error encountered: %s", by, e))  
-        })
-        
-        # remove any NULLs which would indicate failed training for one of the models
-        challengers[ sapply(challengers, is.null)] <- NULL
+         # train each of the challengers; ignore any training failures
+        challengers <- lapply.ignore (challengers.def, 
+                                      function (def) do.call (caret::train, def))
         
         # create a greedy ensemble 
         fit <- caretEnsemble (challengers, iter = 1000L)
