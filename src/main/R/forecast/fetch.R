@@ -40,6 +40,9 @@ fetch <- function( history.file,
             else 
                 max (usage, 0, na.rm = T)
         )]
+    
+    setkeyv(history.complete, c("atm", "trandate"))
+    return (history.complete)
 }
 
 #
