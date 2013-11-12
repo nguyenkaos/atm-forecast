@@ -67,7 +67,7 @@ split <- opts$splitAt
 
 # generate features, build the champion and challengers, and combine them for scoring
 f <- buildFeatures (split)
-models <- combine (split, list (champion (f, split), challenger (f)))
+models <- combine (split, list (naive (f), champion (f), challenger (f)))
 
 # score by model
 scoreBy (models, by = quote (list (model)), score.min.date, score.max.date) []
@@ -99,6 +99,7 @@ if (opts$verbose) {
 
 # should the forecast be exported?
 if (opts$export) {
+    
     export.file <- sprintf("%s-challenger-forecast.csv", data.id)
     export (models, "challenger", data.id, min.date = score.min.date, export.file = export.file)
 }

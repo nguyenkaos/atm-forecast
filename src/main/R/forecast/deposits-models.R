@@ -9,23 +9,22 @@ library("plyr")
 #
 # fetch the current champion model
 #
-champion <- function (features, 
-                      split.at, 
-                      champion.file = "../../resources/deposits-champion.rds") {
+champion <- function (features, champion.file = "../../resources/deposits-champion.rds") {
+
+    models <- readRDS (champion.file)
+    champion <- models [ features, 
+                         list (usage, usage.hat = usage.champ, model = "champion")] 
+}
+
+#
+# fetch the naive model
+#
+naive <- function (features, naive.file = "../../resources/deposits-champion.rds") {
     
-    # fetch current champion's forecast 
-    champion <- readRDS (champion.file)
-    
-    # we are only interested in those atm-days in the feature set
-    champion <- champion [ 
-        features [ trandate > as.Date(split.at) ],
-        list (
-            usage,
-            usage.hat,
-            model = "champion"
-        )] 
-    
-    champion <- champion [ is.finite(usage.hat) ]
+    # grab the naive model
+    models <- readRDS (naive.file)
+    naive <- models [ features, 
+                      list (usage, usage.hat = usage.naive, model = "naive")]
 }
 
 #

@@ -58,6 +58,7 @@ combine <- function (compare.start, list.of.models) {
     
     # combine each model into a single data set for further comparison
     models.combined <- rbindlist (list.of.models)
+    models.combined [, model := factor(model), ]
     setkeyv (models.combined, c("model", "atm", "trandate"))
     
     loginfo("combined '%s' models: [%s x %s]", length(list.of.models), nrow(models.combined), ncol(models.combined))
