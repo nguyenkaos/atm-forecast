@@ -15,11 +15,14 @@ buildFeatures <- function (split.at     = opts$splitAt,
         # fetch the deposits history
         forecast.to = today() + forecast.out
         deposits <- fetch (history.file, forecast.to, data.dir)
-
+        
+        # impute usage where faults may have affected the "actuals"
+        # faults (deposits)
+        
         # split and mark test versus training data
         split.at <- as.Date(split.at)
         train.index <- which ( deposits[["trandate"]] < split.at )
-        deposits [trandate < split.at, train := 1, ]
+        deposits [trandate <  split.at, train := 1, ]
         deposits [trandate >= split.at, train := 0, ]
         
         # remove 'usage' from test data to prevent accidental 'bleed-through'

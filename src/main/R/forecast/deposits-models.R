@@ -118,7 +118,7 @@ trainThenPredict <- function (by,
     train.index <- which (data[["train"]] == 1)
     
     # create the design matrix
-    frame <- model.frame (formula, data, na.action = NULL)
+    frame <- model.frame (formula, data, na.action = na.pass)
     data.y <- model.response (frame)
     data.x <- model.matrix (formula, frame)
     

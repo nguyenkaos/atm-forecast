@@ -64,7 +64,7 @@ dates <- function (data) {
     
     # add date related features
     data [, `:=`(
-        atm              = ordered( atm),
+        atm              = ordered (atm),
         trandate         = as.Date (trandate, format="%m/%d/%Y"),
         quarter          = quarter (trandate),
         month.of.year    = month (trandate),
@@ -225,7 +225,7 @@ rollingTrends <- function (history) {
     rollingTrendBy ("qua", by = quote (c("atm", "quarter")), history)
     rollingTrendBy ("hol", by = quote (c("atm", "holiday")), history)
     rollingTrendBy ("pay", by = quote (c("atm", "payday")), history)
-
+    
 }    
 
 #
@@ -296,3 +296,72 @@ recentHistoryBy <- function (history, name, by) {
     setnames(history, "prev.7", paste(name, "usage.prev.7", sep = "."))
 }
 
+# TODO - GET COMPLETE FAULT DATA FROM ANOOP
+# ----- PREPARE THE INCOMING FAULTS DATA SET -----
+#     faults <- fread ("../../resources/dbf.csv")
+#     setnames (faults, tolower (make.names (names (faults), allow_ = F, )))
+#     faults[, `:=` (
+#         start.time.dt     = NULL,
+#         start.time.tm     = NULL,
+#         contact.type.desc = NULL,
+#         trandate          = as.Date (start.time, "%d%b%Y"),
+#         time.to.resolve   = as.numeric (time.to.resolve),
+#         start.time        = as.POSIXct (start.time, "%d%b%Y:%H:%M:%S", tz = "EST")
+#     ) ,]
+#     setcolorder(faults, c(1, 4, 2, 3))
+#     setkeyv(faults, c("atm","trandate"))
+# ----- PREPARE THE INCOMING FAULTS DATA SET -----
+
+#
+# the "actuals" from an ATM annot be trusted when a fault occurs.  in these
+# cases the deposits history needs to be cleaned-up so that it does not disrupt
+# training.  this function simply merges the faults data with the deposits data.
+#
+# faults <- function (deposits, faults.file = "../../resources/deposits-faults.rds") {
+#     
+#     # merge the faults data with the deposits
+#     faults <- readRDS (faults.file)
+#     
+#     # faults impact 'actuals' on the day of, day after, and day before a fault
+#     faults <- faults [, list (
+#         atm = atm, 
+#         trandate = c(trandate - 1, trandate, trandate + 1)
+#     )]
+# 
+#     # TODO - NEED TO DO THE FOLLOWING BY ATM
+#     # TODO - REMOVE THIS
+#     deposits <- deposits [atm == "TX0659"]
+#     
+#     # merge faults with deposits
+#     setkeyv (faults, c("atm", "trandate"))
+#     setkeyv (deposits, c("atm", "trandate"))
+#     
+#     deposits [ , usage.orig := usage]
+#     deposits [ faults, fault := TRUE ]
+#     deposits [ is.na(fault), fault := FALSE ]
+#     
+#     # use caret to impute what values we might expect
+#     max.actual <- max (which (!is.na (deposits$usage)))
+#     min.actual <- min (which (!is.na (deposits$usage)))
+#     deposits[ fault == T, usage := NA ]
+#     
+#     # extract only the range over which we want to impute
+#     x <- as.matrix (deposits [min.actual:max.actual, list(usage)])
+#     pp <- preProcess (x, method = c("knnImpute"))
+#     
+#     # TODO WHY DOES THIS CRASH R??
+#     #x.impute <- predict(pp, newdata = x)
+#     
+#     library("Amelia")
+#     max.actual <- max (which (!is.na (deposits$usage)))
+#     min.actual <- min (which (!is.na (deposits$usage)))
+#     
+#     x <- deposits[min.actual:max.actual , list(atm, time = as.integer(trandate), usage = usage)]
+#     x.missing <- which(is.na(deposits$usage))
+#     
+#     x.i <- amelia (x, ts = "time", cs = "atm", splinetime = 2, intercs = T)
+#     
+#     p <- x.i$imputations$imp1$usage
+#     plot(p[min.index:max.index], type = "b")
+#     graphics::points(x.missing, pch=19, col="blue")
+# }
