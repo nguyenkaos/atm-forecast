@@ -41,3 +41,6 @@ nohup.out
 scoreBy*.rds
 .RData
 .Rhistory
+.Renviron
+.Rprofile
+library
