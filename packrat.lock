@@ -1,7 +1,7 @@
 PackratFormat: 1.1
 PackratVersion: 0.1.0
 RVersion: 3.0.2
-Repos: http://cran.rstudio.com
+Repos: http://cran.rstudio.com, http://www.stats.ox.ac.uk/pub/RWin
 
 Package: bitops
 Source: CRAN
@@ -149,7 +149,7 @@ Version: 1.5-5
 
 Package: Rcpp
 Source: CRAN
-Version: 0.10.5
+Version: 0.10.6
 
 Package: RcppArmadillo
 Source: CRAN
