@@ -206,18 +206,17 @@ rollingTrendBy <- function(name, by, history) {
     history [trend, `:=` (mean = t.mean, min = t.min, max = t.max, sd = t.sd)]
     
     # create unique names for the trend's components
-    setnames(history, "mean", paste(name, "mean", sep = "."))
-    setnames(history, "min", paste(name, "min", sep = "."))
-    setnames(history, "max", paste(name, "max", sep = "."))
-    setnames(history, "sd", paste(name, "sd", sep = "."))
+    setnames (history, "mean", paste (name, "mean", sep = "."))
+    setnames (history, "min",  paste (name, "min", sep = "."))
+    setnames (history, "max",  paste (name, "max", sep = "."))
+    setnames (history, "sd",   paste (name, "sd", sep = "."))
 }
 
 #
 # adds a mean, min, max, sd to represent a trend by various groupings.
 #
 rollingTrends <- function (history) {
-    
-    # rolling trends specific to each ATM
+
     rollingTrendBy ("woy", by = quote (c("atm", "week.of.year")), history)
     rollingTrendBy ("moy", by = quote (c("atm", "month.of.year")), history)
     rollingTrendBy ("dow", by = quote (c("atm", "day.of.week")), history)
@@ -234,6 +233,7 @@ rollingTrends <- function (history) {
 # out
 #
 recentHistory <- function (history) {
+    
     recentHistoryBy (history, "dow", quote (c ("atm", "day.of.week")))
     recentHistoryBy (history, "wom", quote (c ("atm", "week.of.month")))
     recentHistoryBy (history, "hol", quote (c ("atm", "holiday")))
@@ -278,90 +278,49 @@ recentHistoryBy <- function (history, name, by) {
     mean.prev.7 = mean (history$prev.7, na.rm = T)
     
     # replace all NAs with the column mean
-    history [ is.na(prev.1), prev.1 := mean.prev.1, ]
-    history [ is.na(prev.2), prev.2 := mean.prev.2, ]
-    history [ is.na(prev.3), prev.3 := mean.prev.3, ]
-    history [ is.na(prev.4), prev.4 := mean.prev.4, ]
-    history [ is.na(prev.5), prev.5 := mean.prev.5, ]
-    history [ is.na(prev.6), prev.6 := mean.prev.6, ]
-    history [ is.na(prev.7), prev.7 := mean.prev.7, ]
+    history [ is.na (prev.1), prev.1 := mean.prev.1, ]
+    history [ is.na (prev.2), prev.2 := mean.prev.2, ]
+    history [ is.na (prev.3), prev.3 := mean.prev.3, ]
+    history [ is.na (prev.4), prev.4 := mean.prev.4, ]
+    history [ is.na (prev.5), prev.5 := mean.prev.5, ]
+    history [ is.na (prev.6), prev.6 := mean.prev.6, ]
+    history [ is.na (prev.7), prev.7 := mean.prev.7, ]
     
     # create unique names for the trend's components
-    setnames(history, "prev.1", paste(name, "usage.prev.1", sep = "."))
-    setnames(history, "prev.2", paste(name, "usage.prev.2", sep = "."))
-    setnames(history, "prev.3", paste(name, "usage.prev.3", sep = "."))
-    setnames(history, "prev.4", paste(name, "usage.prev.4", sep = "."))
-    setnames(history, "prev.5", paste(name, "usage.prev.5", sep = "."))
-    setnames(history, "prev.6", paste(name, "usage.prev.6", sep = "."))
-    setnames(history, "prev.7", paste(name, "usage.prev.7", sep = "."))
+    setnames (history, "prev.1", paste(name, "usage.prev.1", sep = "."))
+    setnames (history, "prev.2", paste(name, "usage.prev.2", sep = "."))
+    setnames (history, "prev.3", paste(name, "usage.prev.3", sep = "."))
+    setnames (history, "prev.4", paste(name, "usage.prev.4", sep = "."))
+    setnames (history, "prev.5", paste(name, "usage.prev.5", sep = "."))
+    setnames (history, "prev.6", paste(name, "usage.prev.6", sep = "."))
+    setnames (history, "prev.7", paste(name, "usage.prev.7", sep = "."))
 }
-
-# TODO - GET COMPLETE FAULT DATA FROM ANOOP
-# ----- PREPARE THE INCOMING FAULTS DATA SET -----
-#     faults <- fread ("../../resources/dbf.csv")
-#     setnames (faults, tolower (make.names (names (faults), allow_ = F, )))
-#     faults[, `:=` (
-#         start.time.dt     = NULL,
-#         start.time.tm     = NULL,
-#         contact.type.desc = NULL,
-#         trandate          = as.Date (start.time, "%d%b%Y"),
-#         time.to.resolve   = as.numeric (time.to.resolve),
-#         start.time        = as.POSIXct (start.time, "%d%b%Y:%H:%M:%S", tz = "EST")
-#     ) ,]
-#     setcolorder(faults, c(1, 4, 2, 3))
-#     setkeyv(faults, c("atm","trandate"))
-# ----- PREPARE THE INCOMING FAULTS DATA SET -----
 
 #
 # the "actuals" from an ATM annot be trusted when a fault occurs.  in these
 # cases the deposits history needs to be cleaned-up so that it does not disrupt
-# training.  this function simply merges the faults data with the deposits data.
+# training.  this function simply marks as NA any actuals "close to" when a fault
+# occurred.  by default, caret will ignore any obs. with an NA.
 #
-# faults <- function (deposits, faults.file = "../../resources/deposits-faults.rds") {
-#     
-#     # merge the faults data with the deposits
-#     faults <- readRDS (faults.file)
-#     
-#     # faults impact 'actuals' on the day of, day after, and day before a fault
-#     faults <- faults [, list (
-#         atm = atm, 
-#         trandate = c(trandate - 1, trandate, trandate + 1)
-#     )]
-# 
-#     # TODO - NEED TO DO THE FOLLOWING BY ATM
-#     # TODO - REMOVE THIS
-#     deposits <- deposits [atm == "TX0659"]
-#     
-#     # merge faults with deposits
-#     setkeyv (faults, c("atm", "trandate"))
-#     setkeyv (deposits, c("atm", "trandate"))
-#     
-#     deposits [ , usage.orig := usage]
-#     deposits [ faults, fault := TRUE ]
-#     deposits [ is.na(fault), fault := FALSE ]
-#     
-#     # use caret to impute what values we might expect
-#     max.actual <- max (which (!is.na (deposits$usage)))
-#     min.actual <- min (which (!is.na (deposits$usage)))
-#     deposits[ fault == T, usage := NA ]
-#     
-#     # extract only the range over which we want to impute
-#     x <- as.matrix (deposits [min.actual:max.actual, list(usage)])
-#     pp <- preProcess (x, method = c("knnImpute"))
-#     
-#     # TODO WHY DOES THIS CRASH R??
-#     #x.impute <- predict(pp, newdata = x)
-#     
-#     library("Amelia")
-#     max.actual <- max (which (!is.na (deposits$usage)))
-#     min.actual <- min (which (!is.na (deposits$usage)))
-#     
-#     x <- deposits[min.actual:max.actual , list(atm, time = as.integer(trandate), usage = usage)]
-#     x.missing <- which(is.na(deposits$usage))
-#     
-#     x.i <- amelia (x, ts = "time", cs = "atm", splinetime = 2, intercs = T)
-#     
-#     p <- x.i$imputations$imp1$usage
-#     plot(p[min.index:max.index], type = "b")
-#     graphics::points(x.missing, pch=19, col="blue")
-# }
+faults <- function (deposits, faults.file = "../../resources/deposits-faults.rds") {
+    
+    # faults impact 'actuals' on the day of, day after, and day before a fault
+    faults <- readRDS (faults.file)
+    faults <- faults [, list (
+        atm = atm, 
+        trandate = c(trandate - 1, trandate, trandate + 1)
+    )]
+    
+    # need a common key before merging
+    setkeyv (faults,   c("atm", "trandate"))
+    setkeyv (deposits, c("atm", "trandate"))
+    
+    # merge faults with deposits
+    deposits [ faults,        fault := TRUE ]
+    deposits [ is.na (fault), fault := FALSE ]
+
+    # clear the 'usage' where a fault occured. imputation will occur during training
+    deposits [ fault == T, usage := NA ]
+    
+    logdebug ("scrubbed '%s' actuals due to faults", nrow (deposits [ fault == T ])) 
+}
