@@ -70,7 +70,10 @@ f <- buildFeatures (split)
 models <- combine (split, list (naive (f), champion (f), challenger (f)))
 
 # score by model
-scoreBy (models, by = quote (list (model)), score.min.date, score.max.date) []
+scoreBy (models, 
+         by       = quote (list (model)), 
+         min.date = score.min.date, 
+         max.date = score.max.date) []
 
 # should a detailed score be produced and exported?
 if (opts$verbose) {
