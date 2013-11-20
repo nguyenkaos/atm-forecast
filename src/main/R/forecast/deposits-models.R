@@ -149,6 +149,7 @@ challenger <- function (features,
     features [
         # include only those ATMs that pass the 'subset' expression
         eval (parse (text = subset)),
+        #fault == FALSE,
         
         # train and fit a model
         list (
