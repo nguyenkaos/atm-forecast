@@ -12,7 +12,7 @@ getOptions <- function() {
         
         make_option (c("--splitAt"),
                      help    = "Date at which to split training vs test [default: %default]",
-                     default = "2013-07-16"),
+                     default = "2013-08-16"),
         
         make_option (c("-l", "--logLevel"),
                      help    = "Level of logging [default: %default]",
@@ -56,7 +56,7 @@ source("score.R")
 source("deposits-common.R")
 source("deposits-models.R")
 
-score.min.date <- "2013-08-01"
+score.min.date <- "2013-09-01"
 score.max.date <- "2013-09-30"
 
 # initialization
