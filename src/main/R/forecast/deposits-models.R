@@ -36,11 +36,13 @@ deposits.train <- function (by, data.x, data.y, train.index, data.id) {
     # cache the trained model
     fit.cache <- sprintf ("%s-challenger-%s", data.id, by)
     fit <- cache (fit.cache, {
-        loginfo("%s: pre-processing: [%s x %s]", by, nrow(data.x), ncol(data.x))
+        loginfo("[%s] pre-processing: [%s x %s]", by, nrow(data.x), ncol(data.x))
+        features.before <- colnames (data.x)
         
         # remove features that are highly correlated or with little/no variance
         data.x <- data.x[, -nearZeroVar (data.x)]
         data.x <- data.x[, -findCorrelation (data.x)]
+        logdebug ("[%s] low variance/correlation detected: %s", by, sort (setdiff (features.before, colnames (data.x))))
         
         # split the training and test data
         train.x <- data.x [  train.index, ]
@@ -49,39 +51,46 @@ deposits.train <- function (by, data.x, data.y, train.index, data.id) {
         test.y  <- data.y [ -train.index  ]
         
         # if no training data, or training response all 0s then don't train
-        loginfo("%s: training: [%s x %s]", by, nrow(train.x), ncol(train.x))
+        loginfo("[%s] training: [%s x %s]", by, nrow(train.x), ncol(train.x))
         if (nrow (train.x) > 0 && any (train.y > 0)) {
             
             # TODO THIS IS NOT IMPUTING USAGE THE RESPONSE VARIABLE
             
-            # throw some bounds around the predictions
-            min.prediction <- 0
-            max.prediction <- mean(train.x) + 4 * sd(train.y)
-            
-            # define how tuning of the models should occur
-            preProc <- c("center", "scale")
-            ctrl <- trainControl (
-                method           = "cv",
-                repeats          = 3,
-                returnResamp     = "none", 
-                classProbs       = TRUE,
-                returnData       = FALSE, 
-                savePredictions  = TRUE,
-                allowParallel    = TRUE,
-                predictionBounds = c(min.prediction, max.prediction),
-                index            = createMultiFolds (train.y, k = 5, times = 1))
+            # default args for each of the models
+            args.default = list (
+                x          = train.x, 
+                y          = train.y, 
+                
+                # defines pre-processing 
+                preProcess = c("center", "scale", "knnImpute"),
+                
+                # defines how tuning/training should occur
+                trControl  = trainControl (
+                    method           = "cv",
+                    number           = 5,
+                    classProbs       = T,
+                    returnData       = F,
+                    savePredictions  = T,
+                    allowParallel    = T,
+                    verbose          = F,
+                    returnResamp     = "none", 
+                    predictionBounds = c(0, mean(train.x) + 4 * sd(train.y)),
+                    index            = createFolds (train.y, k = 5)
+                )
+            )
             
             # define each of the challenger models
-            challengers.def <- list ( 
-                list (x = train.x, y = train.y, trControl = ctrl, preProcess = preProc, method = "gbm", verbose = F, keep.data = T),
-                list (x = train.x, y = train.y, trControl = ctrl, preProcess = preProc, method = "glmboost"),
-                list (x = train.x, y = train.y, trControl = ctrl, preProcess = preProc, method = "lasso"),
-                list (x = train.x, y = train.y, trControl = ctrl, preProcess = preProc, method = "leapForward", warn.dep = F)
+            args.custom <- list ( 
+                list (method = "gbm", verbose = F),
+                list (method = "glmboost"),
+                list (method = "lasso"),
+                list (method = "leapForward", warn.dep = F),
+                list (method = "knn")
             )
             
             # train each of the challengers; ignore any training failures
-            challengers <- lapply.ignore (challengers.def, function (c) do.call (caret::train, c))
-            logdebug ("%s: trained '%s' model(s) for ensembling", by, length (challengers))
+            challengers <- lapply.ignore (args.custom, function (args) do.call (caret::train, append (args.default, args)))
+            loginfo ("[%s] trained '%s' model(s) for ensembling", by, length (challengers))
             
             # create a greedy ensemble 
             if (length (challengers) > 0) {
@@ -90,7 +99,7 @@ deposits.train <- function (by, data.x, data.y, train.index, data.id) {
         }
     })
     
-    logdebug ("%s: ensemble chosen with rmse: %.2f models: %s", by, fit$error, format.wide (sort (fit$weights, decreasing = T)))
+    loginfo ("[%s] ensemble chosen with rmse: %.2f models: %s", by, fit$error, format.wide (sort (fit$weights, decreasing = T)))
     return (fit)
 }
 
@@ -112,7 +121,7 @@ deposits.predict <- function (by, fit, data.x, default.predict = 0) {
         prediction <- getOrElse( round (prediction), default.predict)
     }
     
-    loginfo("%s: prediction: [%s x %s]: %s", by, nrow (data.x), ncol (data.x), format.wide (summary (prediction)))
+    loginfo("[%s] prediction: [%s x %s]: %s", by, nrow (data.x), ncol (data.x), format.wide (summary (prediction)))
     return (prediction)
 }
 

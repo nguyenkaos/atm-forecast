@@ -50,7 +50,7 @@ trainAndPredict <- function (formula,
         # TODO CANNOT ASSUME THE TARGET IS USAGE
         train.x <- data.x [train.index, ]
         train.y <- data [train.index, usage]
-        loginfo("%s: training with '%s' obs and '%s' features prior to '%s'.", 
+        loginfo("[%s] training with '%s' obs and '%s' features prior to '%s'.", 
                 by, nrow(train.x), ncol(train.x), split.at)
         
         # no shirt, no shoes, no data = no training
@@ -70,7 +70,7 @@ trainAndPredict <- function (formula,
     prediction <- default.predict 
     if (!is.null (fit)) {
         data.x <- model.matrix (formula, data)
-        loginfo("%s: predicting for '%s' all test/train obs.", by, nrow (data.x))
+        loginfo("[%s] predicting for '%s' all test/train obs.", by, nrow (data.x))
         prediction <- round (predict (fit, newdata = data.x))
     }
     
