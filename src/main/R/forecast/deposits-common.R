@@ -82,6 +82,7 @@ scoreBy <- function (models, by, min.date = -Inf, max.date = Inf, export.file = 
             usage     = sum (usage),
             usage.hat = sum (usage.hat),
             mape      = mape (usage, usage.hat),
+            smape     = smape (usage, usage.hat),
             rmse      = rmse (usage, usage.hat),
             points    = sum (points (usage, usage.hat)),
             u05.ape   = between (ape (usage, usage.hat), 0.00, 0.05),

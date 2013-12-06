@@ -4,7 +4,7 @@ library("Metrics")
 #
 # forecasts the percent error
 #
-pe <- function(actual, predict) {
+pe <- function (actual, predict) {
     (predict - actual) / (actual+1)
 }
 
@@ -12,29 +12,37 @@ pe <- function(actual, predict) {
 # Calculates the APE or "Adjusted Percent Error" when given a single
 # actual outcome and the predicted outcome.
 #
-ape <- function(actual, predict) { 
+ape <- function (actual, predict) { 
     abs (pe (actual, predict)) 
 }
 
 #
 # calculates the mean absolute percent error aka mape
 #
-mape <- function(actual, predict) {
+mape <- function (actual, predict) {
     mean (ape (actual, predict), na.rm = T)
+}
+
+#
+# calculate the symmetric mean absolute percent error aka smape. with this
+# version of smape, the result will always be between 0% and 100%.
+#
+smape <- function (actual, predict) {
+    (1 / length (actual)) * sum (abs (predict - actual) / (actual + predict))
 }
 
 #
 # calculates the number of competition points awarded based on the actual
 # and predicted values.
 #
-points <- function(actual, predict) {
-    points.ape ( ape (actual, predict))
+points <- function (actual, predict) {
+    points.ape (ape (actual, predict))
 }
 
 #
 # Calculates the number of competition points awarded based on the ape.
 #
-points.ape <- function(ape) {
+points.ape <- function (ape) {
     points <- rep (NA, length (ape))
     
     # within 5% gets 2 points
@@ -57,7 +65,7 @@ points.ape <- function(ape) {
 # counts the number of predictions with an APE between 
 # lower and upper
 #
-between <- function(values, lower, upper) {
+between <- function (values, lower, upper) {
     sum (values <= upper & values > lower, na.rm = TRUE)
 }
 
