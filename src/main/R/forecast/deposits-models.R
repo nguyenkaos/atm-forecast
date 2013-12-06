@@ -53,8 +53,8 @@ deposits.train <- function (by, data.x, data.y, train.index, data.id) {
         # if no training data, or training response all 0s then don't train
         loginfo("[%s] training: [%s x %s]", by, nrow(train.x), ncol(train.x))
         if (nrow (train.x) > 0 && any (train.y > 0)) {
-            
-            # TODO THIS IS NOT IMPUTING USAGE THE RESPONSE VARIABLE
+            max.prediction <- max (train.y, na.rm = T) + 4 * sd (train.y, na.rm = T)
+            folds <- 5
             
             # default args for each of the models
             args.default = list (
@@ -67,25 +67,25 @@ deposits.train <- function (by, data.x, data.y, train.index, data.id) {
                 # defines how tuning/training should occur
                 trControl  = trainControl (
                     method           = "cv",
-                    number           = 5,
+                    number           = folds,
                     classProbs       = T,
                     returnData       = F,
                     savePredictions  = T,
                     allowParallel    = T,
                     verbose          = F,
                     returnResamp     = "none", 
-                    predictionBounds = c(0, mean(train.x) + 4 * sd(train.y)),
-                    index            = createFolds (train.y, k = 5)
+                    predictionBounds = c(0, max.prediction),
+                    index            = createFolds (train.y, k = folds)
                 )
             )
             
             # define each of the challenger models
             args.custom <- list ( 
                 list (method = "gbm", verbose = F),
-                list (method = "glmboost"),
-                list (method = "lasso"),
-                list (method = "leapForward", warn.dep = F),
-                list (method = "knn")
+                list (method = "leapForward", warn.dep = F)
+                #list (method = "glmboost")
+                #list (method = "lasso"),
+                #list (method = "knn")
             )
             
             # train each of the challengers; ignore any training failures
