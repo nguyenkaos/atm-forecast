@@ -85,7 +85,7 @@ basename.only <- function (path) {
 #
 getOrElse <- function (expr, default = 0) {
     
-    val <- tryCatch (expr, error = function (e) {})
+    val <- tryCatch (expr, error = function (e) { logerror("error: %s", e) })
     
     if (length(val)) {
         val [!is.finite(val)] <- default
