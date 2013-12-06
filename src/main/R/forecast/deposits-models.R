@@ -117,8 +117,8 @@ deposits.predict <- function (by, fit, data.x, default.predict = 0) {
         data.x <- data.x [, feature.names]
         
         # make a prediction - predict for all test/train
-        prediction <- predict (fit, newdata = data.x)
-        prediction <- getOrElse( round (prediction), default.predict)
+        prediction <- getOrElse( round (predict (fit, newdata = data.x)), 
+                                 default.predict )
     }
     
     loginfo("[%s] prediction: [%s x %s]: %s", by, nrow (data.x), ncol (data.x), format.wide (summary (prediction)))
