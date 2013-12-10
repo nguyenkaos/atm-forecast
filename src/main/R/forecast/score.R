@@ -27,8 +27,17 @@ mape <- function (actual, predict) {
 # calculate the symmetric mean absolute percent error aka smape. with this
 # version of smape, the result will always be between 0% and 100%.
 #
-smape <- function (actual, predict) {
-    (1 / length (actual)) * sum (abs (predict - actual) / (actual + predict))
+smape <- function (actual, predict, na.rm = T) {
+    (1 / length (actual)) * sum (abs (predict - actual) / (actual + predict), 
+                                 na.rm = na.rm)
+}
+
+rmse <- function (actual, predict, na.rm = T) {
+    caret::RMSE (actual, predict, na.rm = na.rm)
+}
+
+r2 <- function (actual, predict, na.rm = T) {
+    caret::R2 (actual, predict, na.rm = na.rm)
 }
 
 #
