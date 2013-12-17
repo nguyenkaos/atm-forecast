@@ -28,7 +28,7 @@ getOptions <- function() {
         
         make_option (c("--historyFile"), 
                      help    = "RDS file containing the ATM history [default: %default]",
-                     default = "withdrawals-mini.rds"),
+                     default = "withdrawals-micro.rds"),
         
         make_option (c("e", "--export"),
                      help    = "Export the forecast [default: %default]",

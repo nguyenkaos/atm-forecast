@@ -84,21 +84,22 @@ dates <- function (data) {
 #
 holidays <- function (features, 
                       holidays.file = "holidays.csv", 
-                      data.dir = "../../resources" ) {
+                      data.dir      = "../../resources" ) {
     logdebug ("creating holiday features")
     
     # grab the raw holidays data
-    holidays.raw <- read.csv(sprintf("%s/%s", data.dir, holidays.file),
-                             col.names=c("date", "NULL", "holiday"),
-                             colClasses=c("Date", "NULL", "character"))
-    holidays <- data.table(holidays.raw, key="date")
-    holidays.max <- max(holidays$date, na.rm=T)
+    holidays.raw <- read.csv (file       = sprintf("%s/%s", data.dir, holidays.file),
+                              col.names  = c("date", "NULL", "holiday"),
+                              colClasses = c("Date", "NULL", "character"))
+    
+    # create a data table
+    holidays <- data.table (holidays.raw, key="date")
     
     # holidays - merge with the features data
-    setkeyv(features, c("trandate", "atm"))
-    features[holidays, holiday := holiday]
-    features[is.na(holiday), holiday := "none"]
-    features[, holiday := as.factor(holiday)]
+    setkeyv (features, c("trandate", "atm"))
+    features [holidays,       holiday := holiday ]
+    features [is.na(holiday), holiday := "none" ]
+    features [,               holiday := as.factor(holiday) ]
 }
 
 #
@@ -111,14 +112,12 @@ paydays <- function (features,
     logdebug ("creating payday features")
     
     # read the paydays data
-    paydays.path <- sprintf("%s/%s", data.dir, paydays.file)
-    paydays.raw <- read.csv(paydays.path, 
-                            col.names=c("base", "trandate", "payday", "type"),
-                            colClasses=c("NULL", "Date", "character", "NULL"))
+    paydays.raw <- read.csv (file       = sprintf ("%s/%s", data.dir, paydays.file), 
+                             col.names  = c("base", "trandate", "payday", "type"),
+                             colClasses = c("NULL", "Date", "character", "NULL"))
     
     # create a data.table
     paydays <- data.table(paydays.raw, key="trandate")
-    paydays.max <- max(paydays$trandate, na.rm=T)
     
     # collapse multiple pay/pre/post days into a single row for each (atm,date)
     paydays <- paydays [, list (
@@ -127,9 +126,9 @@ paydays <- function (features,
     
     # add the paydays data to the rest of the features
     setkeyv (features, c("trandate", "atm"))
-    features [paydays, payday := payday]
-    features [is.na(payday), payday := "none"]
-    features [, payday := as.factor (payday)]
+    features [paydays,       payday := payday ]
+    features [is.na(payday), payday := "none" ]
+    features [,              payday := as.factor (payday) ]
 }
 
 #
@@ -137,7 +136,7 @@ paydays <- function (features,
 # ATM activity.
 #
 socialSecurity <- function (features, 
-                            ss.file = "social-security.csv",
+                            ss.file  = "social-security.csv",
                             data.dir = "../../resources") {
     logdebug ("creating social security payment features")
     
@@ -150,8 +149,8 @@ socialSecurity <- function (features,
     
     # add in the social security pay dates
     setkeyv (features, c("trandate"))
-    features [ss, social.security := social.security]
-    features [is.na(social.security), social.security := FALSE]
+    features [ss,             soc.sec := social.security]
+    features [is.na(soc.sec), soc.sec := FALSE]
     
     setkeyv (features, c("atm", "trandate"))
 }
@@ -167,9 +166,9 @@ events <- function (features,
     logdebug ("creating event features")
     
     # events - clean the data gathered from stub hub
-    events.raw <- read.csv(sprintf("%s/%s", data.dir, events.file),
-                           col.names=c("base","trandate","payday","type"),
-                           colClasses=c("NULL", "Date", "character", "NULL"))
+    events.raw <- read.csv(file       = sprintf("%s/%s", data.dir, events.file),
+                           col.names  = c("base","trandate","payday","type"),
+                           colClasses = c("NULL", "Date", "character", "NULL"))
     events <- rename(events, c("eventdate"    = "trandate", 
                                "totalTickets" = "eventTickets", 
                                "distance"     = "eventDistance"))
@@ -238,7 +237,7 @@ recentHistory <- function (history) {
     recentHistoryBy (history, "wom", quote (c ("atm", "week.of.month")))
     recentHistoryBy (history, "hol", quote (c ("atm", "holiday")))
     recentHistoryBy (history, "pay", quote (c ("atm", "payday")))
-    recentHistoryBy (history, "soc", quote (c ("atm", "social.security")))
+    recentHistoryBy (history, "soc", quote (c ("atm", "soc.sec")))
 }
 
 #
@@ -321,6 +320,5 @@ faults <- function (deposits, faults.file = "../../resources/deposits-faults.rds
 
     # clear the 'usage' where a fault occured. imputation will occur during training
     deposits [ fault == T, usage := NA ]
-    
     logdebug ("scrubbed '%s' actuals due to faults", nrow (deposits [ fault == T ])) 
 }

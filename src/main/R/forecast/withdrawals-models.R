@@ -14,44 +14,44 @@ buildFeatures <- function (split.at     = opts$splitAt,
                            data.dir     = opts$dataDir, 
                            forecast.out = opts$forecastOut) {
     
-    deposits.cache <- sprintf("%s-features", basename.only(history.file))
-    deposits <- cache (deposits.cache, {
+    withd.cache <- sprintf("%s-features", basename.only(history.file))
+    withd <- cache (withd.cache, {
         
-        # fetch the deposits history
+        # fetch the withd history
         forecast.to = today() + forecast.out
-        deposits <- fetch (history.file, forecast.to, data.dir)
+        withd <- fetch (history.file, forecast.to, data.dir)
         
         # split and mark test versus training data
         split.at <- as.Date(split.at)
-        train.index <- which ( deposits[["trandate"]] < split.at )
-        deposits [trandate <  split.at, train := 1, ]
-        deposits [trandate >= split.at, train := 0, ]
+        #train.index <- which ( withd[["trandate"]] < split.at )
+        withd [trandate <  split.at, train := 1, ]
+        withd [trandate >= split.at, train := 0, ]
         
         # remove 'usage' from test data to prevent accidental 'bleed-through'
-        deposits.usage <- deposits[, list(atm, trandate, usage.saved = usage)]
-        deposits [train == 0, usage := NA, ]
+        withd.usage <- withd[, list(atm, trandate, usage.saved = usage)]
+        withd [train == 0, usage := NA, ]
         
         # "actuals" cannot be trusted when a fault occurs; ignore them before building features
-        faults (deposits)
+        faults (withd)
         
         # generate the feature set
-        dates (deposits)
-        paydays (deposits)
-        holidays (deposits)
-        socialSecurity (deposits)
-        rollingTrends (deposits)
-        recentHistory (deposits)
+        dates (withd)
+        paydays (withd)
+        holidays (withd)
+        socialSecurity (withd)
+        rollingTrends (withd)
+        recentHistory (withd)
         
         # add the 'usage' back into the feature set
-        setkeyv (deposits, c("atm", "trandate"))
-        setkeyv (deposits.usage, c("atm", "trandate"))
-        deposits [deposits.usage, usage := usage.saved]
+        setkeyv (withd, c("atm", "trandate"))
+        setkeyv (withd.usage, c("atm", "trandate"))
+        withd [withd.usage, usage := usage.saved]
         
         # validate the feature set
-        validate (deposits)
+        validate (withd)
         
-        loginfo("completed building feature set: [%s x %s]", nrow(deposits), ncol(deposits))
-        deposits
+        loginfo("completed building feature set: [%s x %s]", nrow(withd), ncol(withd))
+        withd
     })
 }
 
