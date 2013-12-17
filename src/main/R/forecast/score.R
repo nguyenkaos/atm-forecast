@@ -78,4 +78,62 @@ between <- function (values, lower, upper) {
     sum (values <= upper & values > lower, na.rm = TRUE)
 }
 
+# 
+# produces a set of scores to compare multiple models.  the 'by' argument must
+# be a quoted argument to avoid pre-mature evaluation.  if 'export.file' is
+# provided the scores will be exported as a csv.
+# 
+scoreBy <- function (models, by, min.date = -Inf, max.date = Inf, export.file = NA) {
+    
+    # score the models
+    scores <- models [
+        trandate >= min.date & trandate <= max.date
+        ,list (
+            usage     = sum (usage),
+            usage.hat = sum (usage.hat),
+            mape      = mape (usage, usage.hat),
+            smape     = smape (usage, usage.hat),
+            rmse      = rmse (usage, usage.hat),
+            r2        = r2 (usage, usage.hat),
+            points    = sum (points (usage, usage.hat)),
+            u05.ape   = between (ape (usage, usage.hat), 0.00, 0.05),
+            u10.ape   = between (ape (usage, usage.hat), 0.05, 0.10),
+            u15.ape   = between (ape (usage, usage.hat), 0.10, 0.15),
+            u20.ape   = between (ape (usage, usage.hat), 0.15, 0.20),
+            over.ape  = between (ape (usage, usage.hat), 0.20, Inf),
+            total.obs = length (usage),
+            total.atm = length (unique (atm))
+        ), by = eval (by)]
+    
+    # export the scores
+    if (!is.na (export.file)) {
+        write.csv (scores, export.file, row.names = FALSE)
+        loginfo ("scores exported to '%s'", export.file)
+    }
+    
+    logdebug("scored by (%s): [%s x %s]", by, nrow(scores), ncol(scores))
+    scores
+}
 
+#
+# export each of the challenger's forecast to a CSV.
+#
+export <- function (models, model.name, data.id, min.date = -Inf, max.date = Inf, export.file = NA) {
+    
+    # export the forecast for each model
+    forecast <- models [
+        model == model.name & trandate >= min.date & trandate <= max.date, 
+        list (
+            atm       = atm, 
+            trandate  = trandate,
+            usage.hat = usage.hat
+        )]
+    
+    # export each forecast to a csv file
+    if (!is.na(export.file)) {
+        write.csv (forecast, export.file, row.names = F)
+        loginfo ("forecast exported to %s", export.file)   
+    }
+    
+    return (forecast)
+}

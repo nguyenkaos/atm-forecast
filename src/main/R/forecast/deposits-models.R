@@ -7,6 +7,86 @@ library("caretEnsemble")
 library("plyr")
 
 #
+# create the feature set
+#
+buildFeatures <- function (split.at     = opts$splitAt,
+                           history.file = opts$historyFile,
+                           data.dir     = opts$dataDir, 
+                           forecast.out = opts$forecastOut) {
+    
+    deposits.cache <- sprintf("%s-features", basename.only(history.file))
+    deposits <- cache (deposits.cache, {
+        
+        # fetch the deposits history
+        forecast.to = today() + forecast.out
+        deposits <- fetch (history.file, forecast.to, data.dir)
+        
+        # split and mark test versus training data
+        split.at <- as.Date(split.at)
+        train.index <- which ( deposits[["trandate"]] < split.at )
+        deposits [trandate <  split.at, train := 1, ]
+        deposits [trandate >= split.at, train := 0, ]
+        
+        # remove 'usage' from test data to prevent accidental 'bleed-through'
+        deposits.usage <- deposits[, list(atm, trandate, usage.saved = usage)]
+        deposits [train == 0, usage := NA, ]
+        
+        # "actuals" cannot be trusted when a fault occurs; ignore them before building features
+        faults (deposits)
+        
+        # generate the feature set
+        dates (deposits)
+        paydays (deposits)
+        holidays (deposits)
+        socialSecurity (deposits)
+        rollingTrends (deposits)
+        recentHistory (deposits)
+        
+        # add the 'usage' back into the feature set
+        setkeyv (deposits, c("atm", "trandate"))
+        setkeyv (deposits.usage, c("atm", "trandate"))
+        deposits [deposits.usage, usage := usage.saved]
+        
+        # validate the feature set
+        validate (deposits)
+        
+        loginfo("completed building feature set: [%s x %s]", nrow(deposits), ncol(deposits))
+        deposits
+    })
+}
+
+#
+# compare the champion and challenger models.combined
+#
+combine <- function (compare.start, list.of.models) {
+    logdebug("combining '%s' models", length(list.of.models))
+    
+    # clean-up  all of the challengers data
+    list.of.models <- lapply (list.of.models, function (m) m [trandate > compare.start] )
+    
+    # combine each model into a single data set for further comparison
+    models.combined <- rbindlist (list.of.models)
+    models.combined [, model := factor(model), ]
+    setkeyv (models.combined, c("model", "atm", "trandate"))
+    
+    loginfo("combined '%s' models: [%s x %s]", length(list.of.models), nrow(models.combined), ncol(models.combined))
+    return (models.combined)
+}
+
+#
+# jumps through some extra hoops like replacing NAs
+#
+findCorrelation <- function(x, use = "pairwise.complete.obs", ...) {
+    
+    # generate a correlation matrix with no NAs
+    cor.mx <- cor (x, use = use)
+    cor.mx [is.na(cor.mx)] <- 0
+    
+    # allow caret to do the hard part
+    caret::findCorrelation(cor.mx)
+}
+
+#
 # fetch the current champion model
 #
 champion <- function (features, champion.file = "../../resources/deposits-champion.rds") {

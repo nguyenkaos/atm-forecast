@@ -53,9 +53,9 @@ source("../common/cache.R")
 source("../common/utils.R")
 source("fetch.R")
 source("score.R")
-source("deposits-common.R")
 source("deposits-models.R")
 
+# defines the time period over which the models will be scored
 score.min.date <- "2013-09-01"
 score.max.date <- "2013-09-30"
 
@@ -83,27 +83,27 @@ if (opts$verbose) {
              by          = quote (list (model)),
              min.date    = score.min.date,
              max.date    = score.max.date,
-             export.file = sprintf("%s-score-by-model.csv", data.id))
+             export.file = sprintf ("%s-score-by-model.csv", data.id))
     
     # score by atm
     scoreBy (models,
              by          = quote (list (model, atm)),
              min.date    = score.min.date,
              max.date    = score.max.date,
-             export.file = sprintf("%s-score-by-atm.csv", data.id))
+             export.file = sprintf ("%s-score-by-atm.csv", data.id))
     
     # score by atm-day
     scoreBy (models, 
              by          = quote (list (model, atm, trandate)), 
              min.date    = score.min.date,
              max.date    = score.max.date,
-             export.file = sprintf("%s-score-by-atm-date.csv", data.id))
+             export.file = sprintf ("%s-score-by-atm-date.csv", data.id))
 }
 
 # should the forecast be exported?
 if (opts$export) {
     
-    export.file <- sprintf("%s-challenger-forecast.csv", data.id)
+    export.file <- sprintf ("%s-challenger-forecast.csv", data.id)
     export (models, "challenger", data.id, min.date = score.min.date, export.file = export.file)
 }
 
