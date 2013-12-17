@@ -123,11 +123,7 @@ export <- function (models, model.name, data.id, min.date = -Inf, max.date = Inf
     # export the forecast for each model
     forecast <- models [
         model == model.name & trandate >= min.date & trandate <= max.date, 
-        list (
-            atm       = atm, 
-            trandate  = trandate,
-            usage.hat = usage.hat
-        )]
+        list (atm, trandate, usage.hat) ]
     
     # export each forecast to a csv file
     if (!is.na(export.file)) {
