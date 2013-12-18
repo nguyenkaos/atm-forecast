@@ -169,10 +169,8 @@ withd.predict <- function (by, fit, data.x, default.predict = 0) {
 #
 # train the challenger and make a prediction for a specific ATM
 #
-trainThenPredict <- function (by,
-                              data, 
-                              data.id,
-                              formula = usage ~ . -1 -train ) {
+trainThenPredict <- function (by, data, data.id, formula ) {
+    
     by <- by[[1]]
     train.index <- which (data[["train"]] == 1)
     
@@ -204,7 +202,7 @@ challenger <- function (features,
         list (
             trandate,
             usage,
-            usage.hat = trainThenPredict (.BY, .SD, data.id),
+            usage.hat = trainThenPredict (.BY, .SD, data.id, usage ~ . -train),
             model     = "challenger"
         ),
         
