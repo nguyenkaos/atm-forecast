@@ -23,7 +23,6 @@ buildFeatures <- function (split.at     = opts$splitAt,
         
         # split and mark test versus training data
         split.at <- as.Date(split.at)
-        #train.index <- which ( withd[["trandate"]] < split.at )
         withd [trandate <  split.at, train := 1, ]
         withd [trandate >= split.at, train := 0, ]
         
@@ -39,8 +38,13 @@ buildFeatures <- function (split.at     = opts$splitAt,
         paydays (withd)
         holidays (withd)
         socialSecurity (withd)
-        rollingTrends (withd)
-        recentHistory (withd)
+        seasonalFactorBy (withd, "seasonal.woy", quote (c("atm", "week.of.year")))
+        seasonalFactorBy (withd, "seasonal.moy", quote (c("atm", "month.of.year")))
+        seasonalFactorBy (withd, "seasonal.dow", quote (c("atm", "day.of.week")))
+        seasonalFactorBy (withd, "seasonal.wom", quote (c("atm", "week.of.month")))
+        seasonalFactorBy (withd, "seasonal.qua", quote (c("atm", "quarter")))
+        seasonalFactorBy (withd, "seasonal.hol", quote (c("atm", "holiday")))
+        seasonalFactorBy (withd, "seasonal.pay", quote (c("atm", "payday")))
         
         # add the 'usage' back into the feature set
         setkeyv (withd, c("atm", "trandate"))

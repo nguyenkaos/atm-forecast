@@ -8,7 +8,7 @@ getOptions <- function() {
     all_options <- list(
         make_option (c("--forecastOut"),
                      help    = "How far out to forecast in days [default: %default]",
-                     default = 120),
+                     default = 60),
         
         make_option (c("--splitAt"),
                      help    = "Date at which to split training vs test [default: %default]",
@@ -16,7 +16,7 @@ getOptions <- function() {
         
         make_option (c("-l", "--logLevel"),
                      help    = "Level of logging [default: %default]",
-                     default = "INFO"),  
+                     default = "DEBUG"),  
         
         make_option (c("--subset"),
                      help    = "An expression to identify a subset of ATMs to forecast [default: %default (all)]",

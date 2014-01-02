@@ -186,6 +186,45 @@ events <- function (features,
     return(features)
 }
 
+#
+# Calculates a seasonal factor by some attribute.  For example, the season factor for 
+# each day of the week.  If the seasonal factor for a Monday is 0.75, this can be 
+# interpreted as Monday's have only 75% of volume experienced on other days.
+#
+seasonalFactorBy <- function(history,
+                             name, 
+                             by.seasonal = quote (c("atm", "day.of.week")), 
+                             by.nonseasonal = quote (c("atm"))) {
+    logdebug ("creating seasonal factors by (%s)", eval(by.seasonal))
+    
+    # calculate the average by season... also ignore 0 days which can throw off the mean
+    mean.seasonal <- history [
+        train == 1 & usage > 0.0, 
+        list (mean.seasonal = mean.finite (usage)), 
+        by = by.seasonal ]
+    
+    # calculate the overall average... also ignore 0 days which can throw off the mean
+    mean.nonseasonal <- history [
+        train == 1 & usage > 0.0, 
+        list (mean.nonseasonal = mean.finite (usage)), 
+        by = by.nonseasonal ]
+    
+    # calculate the seasonal factor
+    factors <- mean.nonseasonal [ mean.seasonal ]
+    factors [, factor := mean.seasonal / mean.nonseasonal ]
+    factors [, mean.nonseasonal := NULL]
+    factors [, mean.seasonal := NULL]
+    setkeyv (factors, eval(by.seasonal))
+    
+    # merge the seasonal factor with the training data
+    setkeyv (history, eval(by.seasonal))
+    history [factors, eval(name) := factor]
+}
+
+#
+# Calculates the mean, min, max, and sd by some attribute.  For
+# example, the mean, min, max, and sd for each day of the week.
+#
 rollingTrendBy <- function(name, by, history) {
     logdebug ("creating rolling trend by (%s)", eval(by))
     

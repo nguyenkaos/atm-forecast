@@ -40,8 +40,13 @@ buildFeatures <- function (split.at     = opts$splitAt,
         paydays (deposits)
         holidays (deposits)
         socialSecurity (deposits)
-        rollingTrends (deposits)
-        recentHistory (deposits)
+        seasonalFactorBy (deposits, "seasonal.woy", quote (c("atm", "week.of.year")))
+        seasonalFactorBy (deposits, "seasonal.moy", quote (c("atm", "month.of.year")))
+        seasonalFactorBy (deposits, "seasonal.dow", quote (c("atm", "day.of.week")))
+        seasonalFactorBy (deposits, "seasonal.wom", quote (c("atm", "week.of.month")))
+        seasonalFactorBy (deposits, "seasonal.qua", quote (c("atm", "quarter")))
+        seasonalFactorBy (deposits, "seasonal.hol", quote (c("atm", "holiday")))
+        seasonalFactorBy (deposits, "seasonal.pay", quote (c("atm", "payday")))
         
         # add the 'usage' back into the feature set
         setkeyv (deposits, c("atm", "trandate"))
