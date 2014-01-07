@@ -12,12 +12,6 @@ plot.atm <- function(data,
     location.desc <- as.character(unique(atm.usage$location.desc)) 
     main <- paste(atm.name, location.desc, sep=" - ")
     
-    # the sub-title
-    city <- as.character(unique(atm.usage$city)) 
-    atm.manu <- as.character(unique(atm.usage$manu.current))
-    atm.capacity <- as.character(unique(atm.usage$atmcapacity))
-    sub <- paste(city, atm.manu, atm.capacity, sep=", ")
-    
     # calculate the expected ylim
     ymax <- max(atm.usage$usage, atm.usage$usageHat)
     
