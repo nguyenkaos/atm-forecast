@@ -1,3 +1,6 @@
+#
+# a monte carlo simulation that calculates the fault risk for an ATM on a given schedule. 
+#
 
 library ("logging")
 library ("foreach")
