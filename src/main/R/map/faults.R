@@ -1,6 +1,9 @@
 
 library ("data.table")
 library ("caret")
+library ("gdata")
+library ("RJSONIO")
+library ("plyr")
 
 source ("maps.R")
 source ("../forecast/fetch.R")
@@ -13,75 +16,75 @@ setnames (locations, "longitude", "lon")
 
 # calculate deposits by week for each ATM in 2013
 deposits <- fetch ("deposits-macro.rds")
-weekly.deposits <- deposits [ 
-    trandate >= "2013-01-01" , 
+deposits.weekly <- deposits [ 
+    trandate >= "2013-01-01" & trandate < "2013-10-01", 
     list (depo = sum (usage, na.rm = T)), 
     by = list (atm, week (trandate))]
-setkeyv (weekly.deposits, c("atm", "week"))
+setkeyv (deposits.weekly, c("atm", "week"))
+
+# center and scale the weekly deposits
+d <- deposits.weekly[, list(depo)]
+pp <- preProcess (d, method = c("scale"))
+deposits.weekly$depo.norm <- predict (pp, newdata = d)
 
 # calculate withdrawals by week for each ATM in 2013
-withdrawals <- fetch ("withdrawals-all.rds")
-weekly.withd <- withdrawals [
-    trandate >= "2013-01-01" , 
+withdrawals <- fetch ("withdrawals-macro.rds")
+withd.weekly <- withdrawals [
+    trandate >= "2013-01-01" & trandate < "2013-10-01", 
     list (withd = sum (usage, na.rm = T)), 
     by = list (atm, week (trandate))]
-setkeyv (weekly.withd, c("atm", "week"))
+setkeyv (withd.weekly, c("atm", "week"))
 
-# load and clean the gasper data
-gasper <- readRDS("../../resources/gasper.rds")
-setkeyv(gasper, "atm")
-faults <- gasper [, list (faults = length(ticket.key)), by = list(atm, week(start.time.dt))]
-setkeyv (faults)
+# center and scale the weekly withdrawals
+w <- withd.weekly[, list(withd)]
+pp <- preProcess (w, method = c("center","scale"))
+withd.weekly$withd.norm <- predict (pp, newdata = w)
 
-weekly <- weekly.deposits [weekly.withd]
-weekly [gasper, faults := length(ticket.key)]
+# merge the deposits and withdrawals
+usage.weekly <- merge (withd.weekly, deposits.weekly, by = c("atm","week"), all = T)
+usage.weekly [is.na(withd), `:=`(withd = 0, withd.norm = 0.0) ]
+usage.weekly [is.na(depo), `:=`(depo = 0, depo.norm = 0.0) ]
 
+usage.weekly [, usage.norm := sum (withd.norm, depo.norm, na.rm = T), 
+              by = list(atm, week) ]
 
+# add the faults data
+faults <- readRDS("../../resources/faults.rds")
+faults.weekly <- faults [
+    ,list (faults = length(start.time)), 
+    by = list(atm, week(start.time)) ]
+setkeyv (faults.weekly, c("atm","week"))
 
+# merge the faults data with usage data
+usage.weekly [faults.weekly, faults := faults]
+usage.weekly [is.na (faults), faults := 0.0]
 
+# calculate faults per usage
+usage.weekly [usage.norm > 0, 
+              fault.rate := faults / usage.norm, 
+              by = list (atm, week)]
+usage.weekly [is.na (fault.rate), fault.rate := 0]
 
-# center and scale the deposits data
-d <- deposits[, list(deposits)]
-pp <- preProcess (d, method = c("center","scale"))
-deposits$deposits.norm <- predict (pp, newdata = d)
+# summarize by ATM
+usage <- usage.weekly [, list(
+    withd      = sum(withd),
+    depo       = sum(depo),
+    faults     = sum(faults),
+    fault.rate = sum(fault.rate)
+), by = atm]
 
-# find total deposits across each ATM
-deposits <- deposits [trandate >= "2013-01-01", 
-                      list (
-                          deposits = sum (usage, na.rm = T),
-                      ), by = atm]
+# merge the location data with the usage and fault data
+keep(usage, locations, sure = T)
+usage [locations, `:=`(lon = lon, lat = lat)]
+keep (usage, sure = T)
 
-# fetch the withdrawals history
-withdrawals <- fetch ("withdrawals-all.rds")
-withdrawals <- withdrawals [trandate >= "2013-01-01", list (withdrawals = sum (usage, na.rm = T)), by = atm]
+# export to json
+usage.out <- unname (alply (usage, 1, identity))
+out <- file("atms.json")
+json <- toJSON(usage.out)
+cat(json, file = out)
+close(out)
 
-input <- withdrawals[, list(deposits)]
-pp <- preProcess (input, method = c("center","scale"))
-deposits$deposits.norm <- predict (pp, newdata = input)
-
-# merge the histories
-usage <- deposits [withdrawals]
-usage [, usage := sum(deposits, withdrawals, na.rm = T), by = atm]
-
-# add the total usage to the profiles
-profiles [usage, usage := usage]
-profiles [is.na(usage), usage := 0 ]
-
-# TODO FAULTS NEED CALCULATED BY WEEK
-
-# add fault data to the profiles
-faults <- gasper [, list(faults = length(ticket.key)), by = atm]
-profiles [faults, fault.count := faults]
-profiles [ is.na(fault.count), fault.count := 0L]
-
-plot <- profiles [, list (
-    atm,
-    lat, 
-    lon,
-    usage,
-    fault.count, 
-    fault.per.usage = fault.count / (usage + 1)
-)]
 
 # map it!
 map.faults ("Chicago, IL", plot, zoom = 11)

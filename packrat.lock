@@ -1,7 +1,7 @@
 PackratFormat: 1.1
 PackratVersion: 0.1.0
 RVersion: 3.0.2
-Repos: http://cran.rstudio.com, http://www.stats.ox.ac.uk/pub/RWin
+Repos: http://cran.rstudio.com
 
 Package: bitops
 Source: CRAN
@@ -37,9 +37,13 @@ Package: data.table
 Source: CRAN
 Version: 1.8.10
 
+Package: dichromat
+Source: CRAN
+Version: 2.0-0
+
 Package: digest
 Source: CRAN
-Version: 0.6.3
+Version: 0.6.4
 
 Package: doParallel
 Source: CRAN
@@ -74,6 +78,11 @@ Package: fracdiff
 Source: CRAN
 Version: 1.4-2
 
+Package: gdata
+Source: CRAN
+Version: 2.13.2
+Requires: gtools
+
 Package: geosphere
 Source: CRAN
 Version: 1.2-28
@@ -83,6 +92,25 @@ Package: getopt
 Source: CRAN
 Version: 1.20.0
 
+Package: ggmap
+Source: CRAN
+Version: 2.3
+Requires: ggplot2, proto, scales, RgoogleMaps, png, plyr, reshape2,
+  rjson, mapproj
+
+Package: ggplot2
+Source: CRAN
+Version: 0.9.3.1
+Requires: plyr, digest, gtable, reshape2, scales, proto, MASS
+
+Package: gtable
+Source: CRAN
+Version: 0.1.2
+
+Package: gtools
+Source: CRAN
+Version: 3.1.1
+
 Package: Hmisc
 Source: CRAN
 Version: 3.12-2
@@ -91,6 +119,10 @@ Requires: survival, Formula, lattice, cluster, rpart
 Package: iterators
 Source: CRAN
 Version: 1.0.6
+
+Package: labeling
+Source: CRAN
+Version: 0.2
 
 Package: lattice
 Source: CRAN
@@ -105,6 +137,19 @@ Source: CRAN
 Version: 1.3.0
 Requires: plyr, stringr, memoise
 
+Package: mapproj
+Source: CRAN
+Version: 1.2-1
+Requires: maps
+
+Package: maps
+Source: CRAN
+Version: 2.3-6
+
+Package: MASS
+Source: CRAN
+Version: 7.3-29
+
 Package: memoise
 Source: CRAN
 Version: 0.1
@@ -113,6 +158,11 @@ Requires: digest
 Package: Metrics
 Source: CRAN
 Version: 0.1.1
+
+Package: munsell
+Source: CRAN
+Version: 0.4.2
+Requires: colorspace
 
 Package: nnet
 Source: CRAN
@@ -135,6 +185,10 @@ Package: plyr
 Source: CRAN
 Version: 1.8
 
+Package: png
+Source: CRAN
+Version: 0.1-7
+
 Package: proto
 Source: CRAN
 Version: 0.3-10
@@ -146,6 +200,10 @@ Version: 0.4-10
 Package: quadprog
 Source: CRAN
 Version: 1.5-5
+
+Package: RColorBrewer
+Source: CRAN
+Version: 1.0-5
 
 Package: Rcpp
 Source: CRAN
@@ -166,6 +224,15 @@ Source: CRAN
 Version: 1.2.2
 Requires: plyr, stringr, lattice
 
+Package: RgoogleMaps
+Source: CRAN
+Version: 1.2.0.5
+Requires: png, RJSONIO
+
+Package: rjson
+Source: CRAN
+Version: 0.2.13
+
 Package: RJSONIO
 Source: CRAN
 Version: 1.0-3
@@ -173,6 +240,11 @@ Version: 1.0-3
 Package: rpart
 Source: CRAN
 Version: 4.1-3
+
+Package: scales
+Source: CRAN
+Version: 0.2.3
+Requires: RColorBrewer, stringr, dichromat, munsell, plyr, labeling
 
 Package: snow
 Source: CRAN
