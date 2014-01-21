@@ -47,6 +47,7 @@ buildFeatures <- function (split.at     = opts$splitAt,
         seasonalFactorBy (deposits, "seasonal.qua", quote (c("atm", "quarter")))
         seasonalFactorBy (deposits, "seasonal.hol", quote (c("atm", "holiday")))
         seasonalFactorBy (deposits, "seasonal.pay", quote (c("atm", "payday")))
+        sequence (deposits)
         
         # add the 'usage' back into the feature set
         setkeyv (deposits, c("atm", "trandate"))

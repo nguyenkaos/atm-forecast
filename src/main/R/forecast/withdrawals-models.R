@@ -45,6 +45,7 @@ buildFeatures <- function (split.at     = opts$splitAt,
         seasonalFactorBy (withd, "seasonal.qua", quote (c("atm", "quarter")))
         seasonalFactorBy (withd, "seasonal.hol", quote (c("atm", "holiday")))
         seasonalFactorBy (withd, "seasonal.pay", quote (c("atm", "payday")))
+        sequence (withd)
         
         # add the 'usage' back into the feature set
         setkeyv (withd, c("atm", "trandate"))
@@ -126,7 +127,7 @@ withd.train <- function (by, data.x, data.y, train.index, data.id) {
             
             # define each of the challenger models
             args.custom <- list ( 
-                list (method = "gbm", verbose = F),
+                #list (method = "gbm", verbose = F),
                 list (method = "leapForward", warn.dep = F)
                 #list (method = "glmboost")
                 #list (method = "lasso"),
@@ -134,7 +135,9 @@ withd.train <- function (by, data.x, data.y, train.index, data.id) {
             )
             
             # train each of the challengers; ignore any training failures
-            challengers <- lapply.ignore (args.custom, function (args) do.call (caret::train, append (args.default, args)))
+            challengers <- lapply.ignore (args.custom, function (args) { 
+                do.call (caret::train, append (args.default, args))
+            })
             loginfo ("[%s] trained '%s' model(s) for ensembling", by, length (challengers))
             
             # create a greedy ensemble 
@@ -144,7 +147,12 @@ withd.train <- function (by, data.x, data.y, train.index, data.id) {
         }
     })
     
-    loginfo ("[%s] ensemble chosen with rmse: %.2f models: %s", by, fit$error, format.wide (sort (fit$weights, decreasing = T)))
+    if (!is.null(fit)) {
+        loginfo ("[%s] ensemble chosen with rmse: %.2f models: %s", by, fit$error, format.wide (sort (fit$weights, decreasing = T)))        
+    } else {
+        stop ( sprintf ("[%s] unable to successfully build any models", by))
+    }
+    
     return (fit)
 }
 

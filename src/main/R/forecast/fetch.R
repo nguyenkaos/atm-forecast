@@ -199,13 +199,13 @@ seasonalFactorBy <- function(history,
     
     # calculate the average by season... also ignore 0 days which can throw off the mean
     mean.seasonal <- history [
-        train == 1 & usage > 0.0, 
+        train == 1 & is.finite(usage) & usage > 0.0, 
         list (mean.seasonal = mean.finite (usage)), 
         by = by.seasonal ]
     
     # calculate the overall average... also ignore 0 days which can throw off the mean
     mean.nonseasonal <- history [
-        train == 1 & usage > 0.0, 
+        train == 1 & is.finite(usage) & usage > 0.0, 
         list (mean.nonseasonal = mean.finite (usage)), 
         by = by.nonseasonal ]
     
@@ -360,4 +360,12 @@ faults <- function (deposits, faults.file = "../../resources/deposits-faults.rds
     # clear the 'usage' where a fault occured. imputation will occur during training
     deposits [ fault == T, usage := NA ]
     logdebug ("scrubbed '%s' actuals due to faults", nrow (deposits [ fault == T ])) 
+}
+
+#
+# Adds a date-based sequence variable to the data set to allow for some modeling of complex
+# stochastic dependencies between values.
+#
+sequence <- function (data) {
+    data[, sequence := as.numeric(trandate)]
 }
