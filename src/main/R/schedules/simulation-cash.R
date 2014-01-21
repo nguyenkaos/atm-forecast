@@ -14,8 +14,9 @@ source ("cumsum-bounded.R")
 basicConfig (level = loglevels ["INFO"])
 set.seed(123123)
 
-atm.count <- 9000
-iterations <- 2
+atm.count <- 90
+iteration.count <- 50
+days <- 120
 
 #
 # fetch the set of ATMs
@@ -36,7 +37,6 @@ setkeyv (capacity, "atm")
 # define all of the possible schedules
 #
 # TODO missing bi-weekly and monthly schedules
-# TODO update with 
 #
 schedules <- CJ (
     "Sun"    = 0:1,  
@@ -62,13 +62,12 @@ schedules.count <- length(unique(schedules$schedule))
 # define the period of which the simulation will occur
 # 
 dates.start <- as.Date("2013-09-01")
-dates.end <- as.Date("2013-12-31") 
-dates <- seq(dates.start, dates.end, by = 1)
+dates <- seq(dates.start, by = 1, length.out = days)
 
 #
 # define the simulation data that has atms, date, and schedules
 #
-sim <- CJ (iteration = 1:500, schedule = 1:schedules.count, atm = atms, date = dates )
+sim <- CJ (iteration = 1:iteration.count, schedule = 1:schedules.count, atm = atms, date = dates )
 sim [, day.of.week := lubridate::wday (date, label = TRUE, abbr = TRUE) ]
 sim [, day.of.week := substr(day.of.week, 1, 3) ]
 
@@ -133,8 +132,16 @@ sim [balance.min < 0, fault := TRUE]
 # calculate the fault risk for each (atm, schedule).  this is effectively
 # the mean of the fault risk over each iteration.
 #
-risk <- sim[, list (
+risks <- sim[, list (
     fault.risk = sum(fault) / .N,
     iterations = max(iteration)
 ), by = list(atm, schedule)]
+
+#
+# export the results
+#
+export.file = "fault-risks.csv"
+write.csv (risks, export.file, row.names = FALSE)
+loginfo ("risks exported to '%s'", export.file)
+
 
