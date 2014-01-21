@@ -1,3 +1,4 @@
+#!/usr/bin/env Rscript
 #
 # a monte carlo simulation that calculates the fault risk for an ATM on a given schedule. 
 #
@@ -6,22 +7,29 @@ library ("logging")
 library ("foreach")
 library ("plyr")
 library ("reshape2")
+library ("data.table")
+
+source ("cumsum-bounded.R")
 
 basicConfig (level = loglevels ["INFO"])
-
 set.seed(123123)
 
+atm.count <- 9000
+iterations <- 2
+
 #
-# the set of ATMs
+# fetch the set of ATMs
 #
 profiles <- readRDS ("../../resources/profiles.rds")
 profiles <- data.table (profiles, key = "atm")
-atms <- (unique(as.character(profiles$atm)))[1]
+atms <- (unique(as.character(profiles$atm)))[1:atm.count]
+atms <- as.factor (atms)
 
 #
 # obtain the ATM cash/bin capacity - TODO get real capacities
 #
-capacity <- data.table (atm = atms, cash.capacity = rep(160000, length(atms)))
+cash.capacity <- 70000
+capacity <- data.table (atm = atms, cash.max = rep(cash.capacity, length(atms)))
 setkeyv (capacity, "atm")
 
 #
@@ -38,17 +46,17 @@ schedules <- CJ (
     "Thu"    = 0:1, 
     "Fri"    = 0:1, 
     "Sat"    = 0:1  )
-schedules[, schedule.id := 1:nrow(schedules) ]
+schedules[, schedule := 1:nrow(schedules) ]
 setcolorder(schedules, c(8, 1:7))
-setkey(schedules, "schedule.id")
+setkey(schedules, "schedule")
 
 #
 # reshape schedules from wide to long so that it is easier to merge with later
 #
-schedules <- data.table( melt(schedules, id = c("schedule.id")))
+schedules <- data.table( melt(schedules, id = c("schedule")))
 setnames(schedules, c("variable","value"), c("day.of.week","service"))
-setkeyv(schedules, c("schedule.id","day.of.week"))
-schedules.count <- length(unique(schedules$schedule.id))
+setkeyv(schedules, c("schedule","day.of.week"))
+schedules.count <- length(unique(schedules$schedule))
 
 #
 # define the period of which the simulation will occur
@@ -60,7 +68,7 @@ dates <- seq(dates.start, dates.end, by = 1)
 #
 # define the simulation data that has atms, date, and schedules
 #
-sim <- CJ (schedule.id = 1:schedules.count, atm = atms, date = dates )
+sim <- CJ (iteration = 1:500, schedule = 1:schedules.count, atm = atms, date = dates )
 sim [, day.of.week := lubridate::wday (date, label = TRUE, abbr = TRUE) ]
 sim [, day.of.week := substr(day.of.week, 1, 3) ]
 
@@ -68,12 +76,13 @@ sim [, day.of.week := substr(day.of.week, 1, 3) ]
 # add the bin capacity - TODO use the bin capacity analysis
 #
 setkeyv(sim, c("atm"))
-sim [capacity, cash.capacity := cash.capacity]
+sim [capacity, cash.max := cash.max]
+sim [, cash.min := 0 ]
 
 #
 # does service occur?
 #
-setkeyv(sim, c("schedule.id", "day.of.week"))
+setkeyv(sim, c("schedule", "day.of.week"))
 sim[ schedules, service := service ]
 
 #
@@ -89,38 +98,43 @@ sim [forecast, demand := demand]
 #
 # add the vendor arrival data - TODO use real data
 #
-sim[, demand.before.percent := runif(forecast.size, min=0.25, max=0.75)]
-sim[, demand.before := round(demand * demand.before.percent) ]
-sim[, demand.after := demand - demand.before]
+sim[service == 1, demand.after := round((1 - runif(forecast.size, min=0.25, max=0.75)) * demand)]
 
 #
 # the vendor always brings enough cash to fill the bin 
 #
-sim[, supply := service * cash.capacity]
+sim[, supply := service * cash.max]
 
 #
-# calculate the projected minimum balance
+# calculate the daily ending balance
 #
-sim[, delta := demand + supply]
-sim[ date == dates.start, delta := cash.capacity, ]
-sim[, balance.end.projected := cumsum(delta), by = list(schedule.id, atm)]
+sim [, balance.end := cumsum.bounded(demand + supply, 
+                                     start = cash.capacity,   # TODO NEEDS TO COME FROM ATM
+                                     lower = cash.min, 
+                                     upper = cash.max), 
+     by = list (iteration, schedule, atm) ]
 
 #
-# when the projected min balance goes below 0, need to adjust the delta as this is not possible
-# TODO - stuck here
+# calculate the daily minimum balance
 #
-sim[ balance.end.projected < 0, delta.adjusted := -(balance.end.projected - delta)]
-sim[ balance.end.projected < 0, delta.adjusted := min(0, delta.adjusted)]
+sim [service == 1, balance.min := balance.end - (demand.after + supply)]
 
 #
-# calculate the projected minimum balance.  pretend the bin is full
-# on day 1.  this may need to change.
+# mark the faults
 #
-# TODO - this is wrong - calc end balance first??
+sim [, fault := FALSE]
+sim [balance.min < 0, fault := TRUE]
+
 #
-#sim[ date == dates.start, demand.before := cash.capacity, ]
-#sim[, balance.min.projected := cumsum(demand.before), by = list(schedule.id, atm)]
+# TODO - calculate overfill and overdraw
+# 
 
-setkeyv(sim, c("atm", "schedule.id"))
-
+#
+# calculate the fault risk for each (atm, schedule).  this is effectively
+# the mean of the fault risk over each iteration.
+#
+risk <- sim[, list (
+    fault.risk = sum(fault) / .N,
+    iterations = max(iteration)
+), by = list(atm, schedule)]
 
