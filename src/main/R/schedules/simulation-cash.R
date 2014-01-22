@@ -25,7 +25,10 @@ ooc.risk <- function (iters, schedules, atms, dates, capacities, forecast) {
     # initialize the data table that will be used for the simulation.  there is no
     # giant set of nested for loops.  there is a single data table containing all
     # of the necessary calculations for the simulation
-    sim <- CJ (atm = atms, schedule = 1:schedules.count, iter = 1:iters, date = dates)
+    sim <- CJ (date     = dates,
+               atm      = atms, 
+               schedule = 1:schedules.count, 
+               iter     = 1:iters)
     
     # add day-of-week
     dow <- data.table(date = dates, 
@@ -33,19 +36,19 @@ ooc.risk <- function (iters, schedules, atms, dates, capacities, forecast) {
                       key  = "date")
     setkey (sim, date)
     sim [ dow, dow := dow]
+
+    # add the forecast data 
+    setkeyv(sim, c("atm","date"))
+    sim [forecast, demand := demand]    
     
     # add the bin capacity - TODO use the bin capacity analysis
-    setkeyv(sim, c("atm"))
+    #setkeyv(sim, c("atm"))
     sim [capacities, cash.max := cash.max]
     sim [, cash.min := 0 ]
     
     # when does service occur?
     setkeyv(sim, c("schedule", "dow"))
     sim[ schedules, service := service ]
-    
-    # add the forecast data 
-    setkeyv(sim, c("atm","date"))
-    sim [forecast, demand := demand]
     
     # add the vendor arrival data 
     # TODO - need to get real data
@@ -73,7 +76,7 @@ ooc.risk <- function (iters, schedules, atms, dates, capacities, forecast) {
     # TODO - calculate overfill and overdraw
     # 
     
-    # calculate the fault risk for each (atm, schedule).  this is effectively
+    # calculate the fault risk for each (atm, schedule).  effectively
     # the mean of the fault risk over each iteration.
     risks <- sim [, list (
         ooc.risk = sum(fault) / .N,
