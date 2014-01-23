@@ -9,13 +9,6 @@ basicConfig (level = loglevels ["INFO"])
 set.seed(123123)
 
 #
-# TODO - PERFORMANCE
-#
-# 2. merge forecast
-# 3. daily min balance calculation
-#
-
-#
 # estimates out-of-cash risk based on a monte carlo simulation
 #
 ooc.risk <- function (iters, schedules, atms, dates, capacities, forecast) {
@@ -90,18 +83,21 @@ main <- function(atm.count = 10, iterations = 500, days = 120) {
     # calculate the out-of-cash risk
     atms <- fetch.atms()[1:atm.count]
     dates <- fetch.dates()
+    schedules <- fetch.schedules()
+    capacities <- fetch.capacities(atms)
+    forecast <- fetch.forecast(atms, dates)
+    
     risks <- ooc.risk (iterations, 
-                       fetch.schedules(), 
+                       schedules, 
                        atms, 
                        dates, 
-                       fetch.capacities(atms), 
-                       fetch.forecast(atms, dates)) 
+                       capacities, 
+                       forecast) 
     
     # export the results
     export.file = "fault-risks.csv"
     write.csv (risks, export.file, row.names = FALSE)
     loginfo ("risks exported to '%s'", export.file)    
-    
 }
 
 
