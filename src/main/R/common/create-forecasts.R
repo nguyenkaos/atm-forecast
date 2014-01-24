@@ -14,12 +14,13 @@ forecast [, `:=` (
     ub        = as.numeric(ub)
 )]
 
-setnames (forecast, "p_usg_adj", "usage.hat")
+setnames (forecast, "usage", "cash")
+setnames (forecast, "p_usg_adj", "cash.hat")
 setnames (forecast, "lb", "lower.bound")
 setnames (forecast, "ub", "upper.bound")
 setkeyv (forecast, c("atm","trandate"))
 
-saveRDS (forecast, "../../resources/forecast-withdrawals.rds")
+saveRDS (forecast, "../../resources/forecast-withdrawals.rds", compress = T, ascii = T)
 
 #
 # create the deposits forecast data set from the SAS original
@@ -40,5 +41,5 @@ setnames (forecast, "lb", "lower.bound")
 setnames (forecast, "ub", "upper.bound")
 setkeyv (forecast, c("atm","trandate"))
 
-saveRDS (forecast, "../../resources/forecast-deposits.rds")
+saveRDS (forecast, "../../resources/forecast-deposits.rds", compress = T, ascii = T)
 
