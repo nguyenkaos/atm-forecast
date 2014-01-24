@@ -6,14 +6,14 @@ library ("lubridate")
 source ("simulation.R")
 
 basicConfig (level = loglevels ["INFO"])
-set.seed(123123)
+#set.seed(123123)
 
 #
 # estimates out-of-cash risk based on a monte carlo simulation
 #
 ooc.risk <- function (iters, schedules, atms, dates, capacities, forecast) {
     
-    schedules.count <- length(unique(schedules$schedule))
+    schedules.count <- length (unique (schedules$schedule))
     
     # initialize the data table that will be used for the simulation.  there is no
     # giant set of nested for loops.  there is a single data table containing all
@@ -25,11 +25,11 @@ ooc.risk <- function (iters, schedules, atms, dates, capacities, forecast) {
     
     # add day-of-week
     dow <- data.table(date = dates, 
-                      dow  = substr (wday (dates, label = T), 1, 3), 
+                      dow  = substr (lubridate::wday (dates, label = T), 1, 3), 
                       key  = "date")
     setkey (sim, date)
     sim [ dow, dow := dow]
-
+    
     # add the forecast data 
     setkeyv(sim, c("atm","date"))
     sim [forecast, demand := demand]    
@@ -47,6 +47,7 @@ ooc.risk <- function (iters, schedules, atms, dates, capacities, forecast) {
     # TODO - need to get real data
     forecast.size <- length(atms) * length(dates)
     sim[service == 1, demand.after := round((1 - runif(forecast.size, min=0.25, max=0.75)) * demand)]
+    sim[service == 0, demand.after := 0]
     
     # the vendor always brings enough cash to fill the bin 
     sim[, supply := service * cash.max]
@@ -59,11 +60,11 @@ ooc.risk <- function (iters, schedules, atms, dates, capacities, forecast) {
          by = list (iter, schedule, atm) ]
     
     # calculate the daily minimum balance
-    sim [service == 1, balance.min := balance.end - (demand.after + supply)]
+    sim [, balance.min := balance.end - (demand.after + supply)]
     
     # mark the faults
     sim [, fault := FALSE]
-    sim [balance.min < 0, fault := TRUE]
+    sim [balance.min <= 0, fault := TRUE]
     
     #
     # TODO - calculate overfill and overdraw
@@ -71,33 +72,56 @@ ooc.risk <- function (iters, schedules, atms, dates, capacities, forecast) {
     
     # calculate the fault risk for each (atm, schedule).  effectively
     # the mean of the fault risk over each iteration.
-    risks <- sim [, list (
-        ooc.risk = sum(fault) / .N,
-        iters = max(iter)
-    ), by = list(atm, schedule)]    
+    risks <- sim [, sum(fault) / .N, by = list(atm, schedule)]    
 }
 
+cum.mean <- function(x) cumsum(x) / seq_along(x)
 
-main <- function(atm.count = 10, iterations = 500, days = 120) {
+main <- function(atm.count = 10, iters = 50, days = 120, delta.max = 0.01, attempts.max = 20, attempts.min = 3) {
     
-    # calculate the out-of-cash risk
+    # data required for the simulation
     atms <- fetch.atms()[1:atm.count]
     dates <- fetch.dates()
     schedules <- fetch.schedules()
-    capacities <- fetch.capacities(atms)
-    forecast <- fetch.forecast(atms, dates)
-    
-    risks <- ooc.risk (iterations, 
-                       schedules, 
-                       atms, 
-                       dates, 
-                       capacities, 
-                       forecast) 
+        
+    for(atm in atms) {
+  
+        # will track the calculated risk after each simulation run
+        risks <- data.table (atm = atm, 
+                             schedule = unique (schedules$schedule), 
+                             fault.risk = c(Inf),
+                             delta = c(Inf),
+                             key = c("atm","schedule"))
+        for(i in 1:attempts.max) {
+            
+            # draw new samples # TODO these need to be different on each iteration
+            capacities <- fetch.capacities(atms, iters)
+            forecast <- fetch.forecast(atms, dates, iters)
+            
+            # run a simulation to calculate the risk
+            risks.last <- ooc.risk (iters, schedules, atms, dates, capacities, forecast) 
+            
+            # merge the latest risk calculation with the rest
+            col.name <- quote(paste("iter", as.character(i * iters), sep = "."))
+            risks [ risks.last, eval(col.name) := V1]        
+            
+            # do we need to continue?
+            risks [, fault.risk := mean (unlist (.SD)),  by = list(atm, schedule, fault.risk, delta)]
+            risks [, delta := max (diff (range (tail (cum.mean (unlist (.SD)), 3)))), by = list(atm, schedule, fault.risk, delta)]
+            if(i > attempts.min && max (risks$delta) < delta.max )
+                break;
+            
+            risks[]
+        }
+
+    }
     
     # export the results
     export.file = "fault-risks.csv"
-    write.csv (risks, export.file, row.names = FALSE)
+    write.csv (risks [, list(atm, schedule, fault.risk)], export.file, row.names = FALSE)
     loginfo ("risks exported to '%s'", export.file)    
+    
+    return (risks)
 }
 
 

@@ -21,12 +21,13 @@ fetch.atms <- function () {
 #
 # fetch the ATM bin capacities
 #
-fetch.capacities <- function(atms) {
+fetch.capacities <- function(atms, iters) {
     
     # TODO - need to get real bin capacities
-    
-    cash.capacity <- 70000
-    capacity <- data.table (atm = atms, cash.max = rep(cash.capacity, length(atms)))
+    capacity.size <- length(atms) * iters
+    capacity <- data.table (atm      = atms, 
+                            iter     = 1:iters,
+                            cash.max = round (rnorm (capacity.size, mean = 70000, sd = 20000)))
     setkeyv (capacity, "atm")
     
     return (capacity)
@@ -69,12 +70,12 @@ fetch.dates <- function (start = as.Date("2013-09-01"), days = 120) {
 #
 # fetch the forecast
 #
-fetch.forecast <- function (atms, dates) {
+fetch.forecast <- function (atms, dates, iters) {
     
     # TODO need to get the real forecast!
     
-    forecast.size <- length(atms) * length(dates)
-    forecast <- CJ (atm = atms, date = dates)
+    forecast.size <- length(atms) * length(dates) * iters
+    forecast <- CJ (atm = atms, date = dates, iter = 1:iters)
     forecast [, demand := -round(runif(forecast.size, min=0, max=20000))]
     setkeyv(forecast, c("atm","date"))
     
