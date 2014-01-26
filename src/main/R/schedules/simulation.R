@@ -63,7 +63,7 @@ fetch.schedules <- function() {
 #
 # define the period of which the simulation will occur
 # 
-fetch.dates <- function (start = as.Date("2013-09-01"), days = 120) {
+fetch.dates <- function (start = as.Date("2013-09-01"), days) {
     seq(start, by = 1, length.out = days)
 }
 
@@ -72,12 +72,26 @@ fetch.dates <- function (start = as.Date("2013-09-01"), days = 120) {
 #
 fetch.forecast <- function (atms, dates, iters) {
     
+    result <- CJ (atm = atms, date = dates, iter = 1:iters)
+    setkeyv (result, c("atm","date"))
+
+    # fetch the actual forecast
+    forecast <- readRDS("../../resources/forecast-withdrawals.rds")
+    setnames (forecast, "trandate", "date")
+    
+    # TODO - DONT THINK THIS IS WORKING - WHY IS ITER = NA IN SOME CASES
+    foo <- result [forecast, allow.cartesian = TRUE]
+    
+    
+    
+    # calculate the std deviation with a 99% confidence interval; ignore lower bound
+    result [, sd := sqrt(1) * ((2 * (upper.bound.99 - cash.hat)) / 5.15 )]
+    
+    # create a forecasted value from a normal distribution
+    result [, demand := rnorm(1, mean = cash.hat, sd = sd), by = list(atm, trandate) ]
+    
     # TODO need to get the real forecast!
+    #forecast.size <- length(atms) * length(dates) * iters
     
-    forecast.size <- length(atms) * length(dates) * iters
-    forecast <- CJ (atm = atms, date = dates, iter = 1:iters)
-    forecast [, demand := -round(runif(forecast.size, min=0, max=20000))]
-    setkeyv(forecast, c("atm","date"))
-    
-    return (forecast)
+    return (result)
 }

@@ -81,7 +81,7 @@ main <- function(atm.count = 10, iters = 50, days = 120, delta.max = 0.01, attem
     
     # data required for the simulation
     atms <- fetch.atms()[1:atm.count]
-    dates <- fetch.dates()
+    dates <- fetch.dates(days = days)
     schedules <- fetch.schedules()
         
     for(atm in atms) {
