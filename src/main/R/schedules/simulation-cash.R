@@ -11,7 +11,7 @@ basicConfig (level = loglevels ["INFO"])
 #
 # estimates out-of-cash risk based on a monte carlo simulation
 #
-ooc.risk <- function (iters, schedules, atms, dates, capacities, forecast) {
+simulate.risk <- function (iters, schedules, atms, dates, capacities, forecast) {
     
     schedules.count <- length (unique (schedules$schedule))
     
@@ -30,18 +30,18 @@ ooc.risk <- function (iters, schedules, atms, dates, capacities, forecast) {
     setkey (sim, date)
     sim [ dow, dow := dow]
     
-    # add the forecast data 
-    setkeyv(sim, c("atm","date"))
-    sim [forecast, demand := demand]    
-    
-    # add the bin capacity - TODO use the bin capacity analysis
-    #setkeyv(sim, c("atm"))
-    sim [capacities, cash.max := cash.max]
-    sim [, cash.min := 0 ]
-    
     # when does service occur?
     setkeyv(sim, c("schedule", "dow"))
     sim[ schedules, service := service ]
+    
+    # add the bin capacity - TODO use the bin capacity analysis
+    setkeyv(sim, c("atm","iter"))
+    sim [capacities, cash.max := cash.max]
+    sim [, cash.min := 0 ]
+
+    # add the forecast data 
+    setkeyv(sim, c("atm","date","iter"))
+    sim [forecast, demand := -demand]   
     
     # add the vendor arrival data 
     # TODO - need to get real data
@@ -50,11 +50,12 @@ ooc.risk <- function (iters, schedules, atms, dates, capacities, forecast) {
     sim[service == 0, demand.after := 0]
     
     # the vendor always brings enough cash to fill the bin 
-    sim[, supply := service * cash.max]
+    sim[, supply := service * cash.max ]
     
     # calculate the daily ending balance
+    #setkeyv(sim, c("iter","schedule","atm","date"))
     sim [, balance.end := cumsum.bounded(demand + supply, 
-                                         start = 70000,   # TODO NEEDS TO COME FROM ATM
+                                         start = 0,   # TODO SHOULD NOT START FROM 0
                                          lower = cash.min, 
                                          upper = cash.max), 
          by = list (iter, schedule, atm) ]
@@ -71,17 +72,15 @@ ooc.risk <- function (iters, schedules, atms, dates, capacities, forecast) {
     # 
     
     # calculate the fault risk for each (atm, schedule).  effectively
-    # the mean of the fault risk over each iteration.
+    # the mean of the fault risk over each set of iterations
     risks <- sim [, sum(fault) / .N, by = list(atm, schedule)]    
 }
 
-cum.mean <- function(x) cumsum(x) / seq_along(x)
-
-main <- function(atm.count = 10, iters = 50, days = 120, delta.max = 0.01, attempts.max = 20, attempts.min = 3) {
+ooc.risk <- function(atm.count = 1, iters = 50, days = 120, delta.max = 0.01, attempts.max = 20, attempts.min = 3) {
     
     # data required for the simulation
     atms <- fetch.atms()[1:atm.count]
-    dates <- fetch.dates(days = days)
+    dates <- fetch.dates(start = as.Date('2013-11-10'), days = days)
     schedules <- fetch.schedules()
         
     for(atm in atms) {
@@ -94,12 +93,12 @@ main <- function(atm.count = 10, iters = 50, days = 120, delta.max = 0.01, attem
                              key = c("atm","schedule"))
         for(i in 1:attempts.max) {
             
-            # draw new samples # TODO these need to be different on each iteration
+            # draw new samples independently for each iteration
             capacities <- fetch.capacities(atms, iters)
             forecast <- fetch.forecast(atms, dates, iters)
             
             # run a simulation to calculate the risk
-            risks.last <- ooc.risk (iters, schedules, atms, dates, capacities, forecast) 
+            risks.last <- simulate.risk (iters, schedules, atms, dates, capacities, forecast) 
             
             # merge the latest risk calculation with the rest
             col.name <- quote(paste("iter", as.character(i * iters), sep = "."))
@@ -113,7 +112,6 @@ main <- function(atm.count = 10, iters = 50, days = 120, delta.max = 0.01, attem
             
             risks[]
         }
-
     }
     
     # export the results

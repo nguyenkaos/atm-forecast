@@ -13,7 +13,7 @@ fetch.atms <- function () {
     profiles <- readRDS ("../../resources/profiles.rds")
     profiles <- data.table (profiles, key = "atm")
     atms <- (unique(as.character(profiles$atm)))
-    atms <- as.factor (atms)
+    #atms <- as.factor (atms)
     
     return (atms)
 }
@@ -28,7 +28,7 @@ fetch.capacities <- function(atms, iters) {
     capacity <- data.table (atm      = atms, 
                             iter     = 1:iters,
                             cash.max = round (rnorm (capacity.size, mean = 70000, sd = 20000)))
-    setkeyv (capacity, "atm")
+    setkeyv (capacity, c("atm","iter"))
     
     return (capacity)
 }
@@ -72,26 +72,27 @@ fetch.dates <- function (start = as.Date("2013-09-01"), days) {
 #
 fetch.forecast <- function (atms, dates, iters) {
     
-    result <- CJ (atm = atms, date = dates, iter = 1:iters)
-    setkeyv (result, c("atm","date"))
-
-    # fetch the actual forecast
-    forecast <- readRDS("../../resources/forecast-withdrawals.rds")
-    setnames (forecast, "trandate", "date")
+    # a forecast value is needed for each (atm, date, iter)
+    forecast <- CJ (atm = atms, date = dates, iter = 1:iters)
+    setkeyv (forecast, c("atm","date","iter"))
     
-    # TODO - DONT THINK THIS IS WORKING - WHY IS ITER = NA IN SOME CASES
-    foo <- result [forecast, allow.cartesian = TRUE]
+    # fetch the withdrawal forecast mean and bounds
+    forecast.params <- readRDS("../../resources/forecast-withdrawals.rds")
+    setnames (forecast.params, "trandate", "date")
     
+    # TODO - is my std deviation calculation correct?
+    # choose a normally distributed random value for each iteration
+    forecast [forecast.params, 
+              demand := round (rnorm (n    = iters, 
+                                      mean = cash.hat, 
+                                      sd   = (2 * (upper.bound.99 - cash.hat)) / 5.15))]
     
-    
-    # calculate the std deviation with a 99% confidence interval; ignore lower bound
-    result [, sd := sqrt(1) * ((2 * (upper.bound.99 - cash.hat)) / 5.15 )]
-    
-    # create a forecasted value from a normal distribution
-    result [, demand := rnorm(1, mean = cash.hat, sd = sd), by = list(atm, trandate) ]
-    
-    # TODO need to get the real forecast!
-    #forecast.size <- length(atms) * length(dates) * iters
-    
-    return (result)
+    # the demand will be NA, if there is no forecast for the given date
+    return (forecast [!is.na(demand)])
 }
+
+#
+# cumulative mean
+#
+cum.mean <- function(x) cumsum(x) / seq_along(x)
+
