@@ -88,7 +88,7 @@ fetch.forecast <- function (atms, dates, iters) {
     forecast [forecast.params, 
               demand := round (rnorm (n    = iters, 
                                       mean = cash.hat, 
-                                      sd   = (2 * (upper.bound.99 - cash.hat)) / 5.15))]
+                                      sd   = (2 * (upper.bound.95 - cash.hat)) / 3.92))]
 
     # the demand will be NA, if there is no forecast for the given date
     return (forecast [!is.na(demand)])
