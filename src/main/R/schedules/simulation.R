@@ -3,8 +3,9 @@ library ("foreach")
 library ("plyr")
 library ("reshape2")
 library ("data.table")
+library ("Rcpp")
 
-source ("cumsum-bounded.R")
+sourceCpp ("balances.cpp")
 
 #
 # fetch the set of ATMs
@@ -86,10 +87,11 @@ fetch.forecast <- function (atms, dates, iters) {
               demand := round (rnorm (n    = iters, 
                                       mean = cash.hat, 
                                       sd   = (2 * (upper.bound.99 - cash.hat)) / 5.15))]
-    
+
     # the demand will be NA, if there is no forecast for the given date
     return (forecast [!is.na(demand)])
 }
+
 
 #
 # cumulative mean
