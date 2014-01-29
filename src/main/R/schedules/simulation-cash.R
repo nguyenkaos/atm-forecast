@@ -2,6 +2,11 @@
 #
 # a monte carlo simulation that calculates the fault risk for an ATM on a given schedule. 
 #
+# TODO
+# (1) The day 1 balance for the simulation is set to 0. What should this be?
+# (2) Add in the bi-weekly and monthly schedules.
+# (3) Performance - Will this scale?
+#
 library ("lubridate")
 source ("simulation.R")
 
@@ -11,7 +16,7 @@ basicConfig (level = loglevels ["INFO"])
 #
 # estimates out-of-cash risk based on a monte carlo simulation
 #
-simulate.risk <- function (iters, schedules, atms, dates, capacities, forecast) {
+simulate.cash.risk <- function (iters, schedules, atms, dates, capacities, forecast) {
     
     schedules.count <- length (unique (schedules$schedule))
     
@@ -37,29 +42,27 @@ simulate.risk <- function (iters, schedules, atms, dates, capacities, forecast) 
     # add the forecast data 
     setkeyv (sim, c("atm","date","iter"))
     sim [forecast, demand := -demand]   
-
+    
     # add the bin capacity - TODO use the bin capacity analysis
     sim [capacities, cash.max := cash.max]
     sim [, cash.min := 0 ]
     
     # add the vendor arrival data 
-    # TODO - need to get real data
     forecast.size <- length(atms) * length(dates)
     sim[service == 1, demand.split := runif(forecast.size, min=0.25, max=0.75)]
     sim[service == 0, demand.split := 1]
     
-    # how is the demand distributed before and after when the vendor arrives
+    # distribute demand based on when the vendor arrives
     sim [, demand.early := round (demand * demand.split)]
     sim [, demand.late := demand - demand.early]
     
     # the vendor always brings enough cash to fill the bin 
     sim[, supply := service * cash.max ]
     
-    # TODO SHOULD NOT START FROM 0 ??
     # calculate the daily ending balance
     sim [, 
          c("balance","fault","demand.excess","supply.excess") := 
-             balances(0, demand.early, supply, demand.late, cash.max),
+             balances (0, demand.early, supply, demand.late, cash.max),
          by = list (iter, schedule, atm) ]
     
     # summarize the simulation results
@@ -70,27 +73,35 @@ simulate.risk <- function (iters, schedules, atms, dates, capacities, forecast) 
     ), by = list(atm, schedule)]    
 }
 
-ooc.risk <- function(atm.count = 1, iters = 50, days = 120, delta.max = 0.01, attempts.max = 20, attempts.min = 3) {
+fault.risks <- function(start.date   = '2013-11-10',
+                        atm.count    = 1, 
+                        iters        = 20, 
+                        days         = 120, 
+                        delta.max    = 0.01, 
+                        attempts.max = 20, 
+                        attempts.min = 3) {
     
     # data required for the simulation
-    atms <- fetch.atms()[1:atm.count]
-    dates <- fetch.dates(start = as.Date('2013-11-10'), days = days)
-    schedules <- fetch.schedules()
+    atms       <- fetch.atms() [1:atm.count]
+    dates      <- fetch.dates(start = as.Date(start.date), days = days)
+    schedules  <- fetch.schedules()
     capacities <- fetch.capacities()
     
+    # simulate each ATM separately
     for(atm in atms) {
         
         # will track the calculated risk after each simulation run
         risks <- data.table ()
         for(i in 1:attempts.max) {
-            loginfo("executing %d iterations of %d possible", i * iters, attempts.max * iters)
+            loginfo("[%s] executing %d iterations of %d possible", atm, i * iters, attempts.max * iters)
             
             # draw new samples independently for each iteration
             forecast <- fetch.forecast(atms, dates, iters)
             
             # run a simulation to calculate the risk
-            risks <- rbindlist (list (risks, 
-                                      simulate.risk (iters, schedules, atms, dates, capacities, forecast)))        
+            risks <- rbindlist (list (
+                risks, 
+                simulate.cash.risk (iters, schedules, atms, dates, capacities, forecast)))        
             
             # once the fault risk converges, no further simulations needed
             summary  <- risks [, list (
@@ -99,7 +110,7 @@ ooc.risk <- function(atm.count = 1, iters = 50, days = 120, delta.max = 0.01, at
                 attempts      = .N
             ), by = list (atm, schedule)]
             
-            if (max(summary$attempts) > attempts.min && max (summary$delta) < delta.max)
+            if (max (summary$attempts) > attempts.min && max (summary$delta) < delta.max)
                 break;
         }
     }
@@ -119,7 +130,5 @@ ooc.risk <- function(atm.count = 1, iters = 50, days = 120, delta.max = 0.01, at
     
     return (results)
 }
-
-
 
 
