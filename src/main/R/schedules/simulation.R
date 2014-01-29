@@ -14,24 +14,26 @@ fetch.atms <- function () {
     profiles <- readRDS ("../../resources/profiles.rds")
     profiles <- data.table (profiles, key = "atm")
     atms <- (unique(as.character(profiles$atm)))
-    #atms <- as.factor (atms)
     
     return (atms)
 }
 
 #
-# fetch the ATM bin capacities
+# fetch the ATM cash bin capacities.  these are treated
+# as fixed values.
 #
-fetch.capacities <- function(atms, iters) {
+fetch.capacities <- function() {
     
-    # TODO - need to get real bin capacities
-    capacity.size <- length(atms) * iters
-    capacity <- data.table (atm      = atms, 
-                            iter     = 1:iters,
-                            cash.max = round (rnorm (capacity.size, mean = 70000, sd = 20000)))
-    setkeyv (capacity, c("atm","iter"))
+    # fetch the atm profiles
+    profiles <- readRDS ("../../resources/profiles.rds")
+    profiles <- data.table (profiles, key = "atm")
     
-    return (capacity)
+    # pull out the cash bin capacities
+    capacities <- profiles [, list(atm, atmcapacity)]
+    setnames (capacities, "atmcapacity", "cash.max")
+    setkeyv (capacities, c("atm"))
+    
+    return (capacities)
 }
 
 #

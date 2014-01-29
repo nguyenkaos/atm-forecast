@@ -31,17 +31,16 @@ simulate.risk <- function (iters, schedules, atms, dates, capacities, forecast) 
     sim [ dow, dow := dow]
     
     # when does service occur?
-    setkeyv(sim, c("schedule", "dow"))
+    setkeyv (sim, c("schedule", "dow"))
     sim[ schedules, service := service ]
     
+    # add the forecast data 
+    setkeyv (sim, c("atm","date","iter"))
+    sim [forecast, demand := -demand]   
+
     # add the bin capacity - TODO use the bin capacity analysis
-    setkeyv(sim, c("atm","iter"))
     sim [capacities, cash.max := cash.max]
     sim [, cash.min := 0 ]
-    
-    # add the forecast data 
-    setkeyv(sim, c("atm","date","iter"))
-    sim [forecast, demand := -demand]   
     
     # add the vendor arrival data 
     # TODO - need to get real data
@@ -59,7 +58,8 @@ simulate.risk <- function (iters, schedules, atms, dates, capacities, forecast) 
     # TODO SHOULD NOT START FROM 0 ??
     # calculate the daily ending balance
     sim [, 
-         c("balance","fault","demand.excess","supply.excess") := balances(0, demand.early, supply, demand.late, cash.max),
+         c("balance","fault","demand.excess","supply.excess") := 
+             balances(0, demand.early, supply, demand.late, cash.max),
          by = list (iter, schedule, atm) ]
     
     # summarize the simulation results
@@ -76,6 +76,7 @@ ooc.risk <- function(atm.count = 1, iters = 50, days = 120, delta.max = 0.01, at
     atms <- fetch.atms()[1:atm.count]
     dates <- fetch.dates(start = as.Date('2013-11-10'), days = days)
     schedules <- fetch.schedules()
+    capacities <- fetch.capacities()
     
     for(atm in atms) {
         
@@ -85,7 +86,6 @@ ooc.risk <- function(atm.count = 1, iters = 50, days = 120, delta.max = 0.01, at
             loginfo("executing %d iterations of %d possible", i * iters, attempts.max * iters)
             
             # draw new samples independently for each iteration
-            capacities <- fetch.capacities(atms, iters)
             forecast <- fetch.forecast(atms, dates, iters)
             
             # run a simulation to calculate the risk
